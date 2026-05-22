@@ -1,0 +1,99 @@
+# ═══════════════════════════════════════════════════════════════
+#  AEQUITAS — Docker Compose (local development)
+#  Start everything: make dev
+#  Stop everything:  make down
+# ═══════════════════════════════════════════════════════════════
+
+services:
+
+  # ── PostgreSQL database ──────────────────────────────────────
+  db:
+    image: timescale/timescaledb:latest-pg16
+    container_name: aequitas-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: aequitas
+      POSTGRES_PASSWORD: aequitas
+      POSTGRES_DB: aequitas
+    ports:
+      - "5432:5432"          # exposed so you can connect via SQLTools in VS Code
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aequitas -d aequitas"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Redis ────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: aequitas-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes   # persist data across restarts
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── FastAPI backend ──────────────────────────────────────────
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: aequitas-backend
+    restart: unless-stopped
+    env_file:
+      - ../.env                # loads all your .env variables into the container
+    environment:
+      # Override DB/Redis URLs to use Docker container names (not localhost)
+      DATABASE_URL: postgresql://aequitas:aequitas@db:5432/aequitas
+      REDIS_URL: redis://redis:6379/0
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../backend/app:/app/app  # live reload — code changes reflect instantly
+    depends_on:
+      db:
+        condition: service_healthy   # wait for Postgres to be ready
+      redis:
+        condition: service_healthy   # wait for Redis to be ready
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  # ── Next.js frontend ─────────────────────────────────────────
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    container_name: aequitas-frontend
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+      NEXT_PUBLIC_WS_URL: ws://localhost:8000
+    ports:
+      - "3000:3000"
+    volumes:
+      - ../frontend:/app          # live reload
+      - /app/node_modules         # keep node_modules inside container
+    depends_on:
+      - backend
+
+# ── Named volumes (data persists across container restarts) ────
+volumes:
+  pgdata:
+  redisdata:
+
+# ── Shared network (containers talk to each other by name) ────
+networks:
+  default:
+    name: aequitas-network
