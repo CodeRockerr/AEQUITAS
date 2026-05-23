@@ -1,14 +1,5 @@
 # ═══════════════════════════════════════════════════════════════
-#  AEQUITAS — CI Pipeline
-#
-#  Triggers: every pull request (any branch → main)
-#            every push to main
-#
-#  Jobs:
-#    backend  → lint + typecheck + test
-#    frontend → type-check + build
-#
-#  Both jobs must pass before a PR can merge.
+#  AEQUITAS — CI Pipeline (fixed)
 # ═══════════════════════════════════════════════════════════════
 
 name: CI
@@ -19,21 +10,20 @@ on:
   push:
     branches: [main]
 
-# Cancel any in-progress CI run for the same PR when a new
-# commit is pushed — saves GitHub Actions minutes
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true   # opt into Node 24 now
+
 jobs:
 
-  # ── Backend: lint + typecheck + test ────────────────────────
+  # ── Backend ─────────────────────────────────────────────────
   backend:
     name: Backend
     runs-on: ubuntu-latest
 
-    # Spin up Postgres + Redis as service containers.
-    # They're available to the job at localhost:5432 / 6379.
     services:
       postgres:
         image: timescale/timescaledb:latest-pg16
@@ -59,37 +49,31 @@ jobs:
 
     defaults:
       run:
-        working-directory: backend   # all steps run inside /backend
+        working-directory: backend
 
     steps:
-      # 1. Check out the code
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4        # v4 is correct — the Node24 fix is the env var above
 
-      # 2. Set up Python 3.12
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: "pip"              # cache pip downloads between runs
+          cache: "pip"
+          cache-dependency-path: backend/pyproject.toml
 
-      # 3. Install all dependencies (including [dev] extras)
       - name: Install dependencies
         run: pip install -e ".[dev]"
 
-      # 4. Ruff lint — catches style errors and common bugs
       - name: Lint (Ruff)
         run: ruff check app tests
 
-      # 5. Ruff format check — ensures code is formatted consistently
       - name: Format check (Ruff)
         run: ruff format --check app tests
 
-      # 6. Mypy type checking — catches type errors before runtime
       - name: Type check (Mypy)
         run: mypy app
 
-      # 7. Pytest — run all tests with coverage
       - name: Test (Pytest)
         env:
           APP_ENV: test
@@ -99,14 +83,7 @@ jobs:
           JWT_SECRET_KEY: test-jwt-key-not-real
         run: pytest tests/ --cov=app --cov-report=xml -v
 
-      # 8. Upload coverage report to GitHub (visible on PR page)
-      - name: Upload coverage
-        uses: codecov/codecov-action@v4
-        with:
-          file: backend/coverage.xml
-          fail_ci_if_error: false   # don't fail CI if codecov is down
-
-  # ── Frontend: typecheck + build ─────────────────────────────
+  # ── Frontend ─────────────────────────────────────────────────
   frontend:
     name: Frontend
     runs-on: ubuntu-latest
@@ -119,7 +96,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Set up Node with npm cache
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -127,19 +103,15 @@ jobs:
           cache: "npm"
           cache-dependency-path: frontend/package-lock.json
 
-      # Install node modules
       - name: Install dependencies
-        run: npm ci                  # ci = clean install, faster + stricter than npm install
+        run: npm ci
 
-      # TypeScript type check
       - name: Type check
-        run: npx tsc --noEmit       # checks types without producing output files
+        run: npx tsc --noEmit
 
-      # ESLint
       - name: Lint
         run: npm run lint
 
-      # Full Next.js build — catches any build-time errors
       - name: Build
         run: npm run build
         env:
