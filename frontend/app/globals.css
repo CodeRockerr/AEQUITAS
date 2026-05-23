@@ -1,0 +1,28 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-brand: #0f6e56;
+    --color-brand-light: #e1f5ee;
+  }
+
+  /* Smooth scrolling everywhere */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Clean scrollbar for dark theme */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #030712;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #374151;
+    border-radius: 3px;
+  }
+}
