@@ -75,8 +75,8 @@ async def readiness_check() -> ReadinessResponse:
     add the connection pools. For now it returns 'ok' as a placeholder.
     """
     checks: dict[str, str] = {
-        "database": "ok",   # TODO Week 2: real DB ping
-        "redis": "ok",      # TODO Week 2: real Redis ping
+        "database": "ok",  # TODO Week 2: real DB ping
+        "redis": "ok",  # TODO Week 2: real Redis ping
     }
 
     all_ok = all(v == "ok" for v in checks.values())

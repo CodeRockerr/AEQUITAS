@@ -72,7 +72,17 @@ def test_health_ready_returns_ready_status(client: TestClient) -> None:
 
 
 @pytest.mark.unit
-def test_docs_available_in_development(client: TestClient) -> None:
-    """Swagger /docs should be accessible in development mode."""
+def test_docs_disabled_outside_development(client: TestClient) -> None:
+    """Swagger /docs should be disabled in non-development environments.
+
+    In CI, APP_ENV=test so /docs returns 404.
+    This is intentional — never expose API docs in production.
+    """
+    from app.config import settings
+
     response = client.get("/docs")
-    assert response.status_code == 200
+
+    if settings.is_development:
+        assert response.status_code == 200
+    else:
+        assert response.status_code == 404
