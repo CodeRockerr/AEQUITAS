@@ -18,7 +18,7 @@ log = structlog.get_logger()
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     log.info("aequitas_starting", env=settings.app_env, debug=settings.app_debug)
     yield
     log.info("aequitas_shutting_down")

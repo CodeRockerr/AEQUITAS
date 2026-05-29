@@ -1,4 +1,4 @@
-/** @type {import('postcss-load-config').Config} */
+// postcss.config.mjs
 const config = {
   plugins: {
     tailwindcss: {},
@@ -6,4 +6,4 @@ const config = {
   },
 };
 
-module.exports = config;
+export default config;   // ← ES module export, not module.exports

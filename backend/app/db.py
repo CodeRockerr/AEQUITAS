@@ -61,7 +61,7 @@ class Base(DeclarativeBase):
 
 
 # ── FastAPI dependency ────────────────────────────────────────
-async def get_db() -> AsyncGenerator[AsyncSession, None]:
+async def get_db() -> AsyncGenerator[AsyncSession]:
     """
     FastAPI dependency that provides a database session.
 
