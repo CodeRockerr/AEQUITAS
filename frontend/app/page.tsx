@@ -6,40 +6,11 @@
  * confirms the frontend is running and can reach the backend.
  */
 import Link from "next/link";
-
-function StatusIndicator({
-  label,
-  status,
-  apiUrl,
-}: {
-  label: string;
-  status: "online" | "checking" | "offline";
-  apiUrl?: string;
-}) {
-  const statusStyles = {
-    online: "bg-emerald-500",
-    checking: "bg-amber-500 animate-pulse",
-    offline: "bg-red-500",
-  } as const;
-
-  return (
-    <div className="rounded-xl border border-gray-800 bg-gray-950/60 p-4 text-center">
-      <div className="mb-2 flex items-center justify-center gap-2">
-        <span className={`h-2.5 w-2.5 rounded-full ${statusStyles[status]}`} />
-        <span className="text-sm font-medium text-white">{label}</span>
-      </div>
-      <p className="text-xs text-gray-400">
-        {status === "checking" ? "Checking…" : status}
-        {apiUrl ? ` · ${apiUrl}` : ""}
-      </p>
-    </div>
-  );
-}
+import { StatusIndicator } from "@/components/ui/StatusIndicator";
 
 export default function HomePage() {
   return (
     <main className="min-h-screen flex flex-col items-center justify-center px-4">
-
       {/* Logo + name */}
       <div className="text-center mb-12">
         <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-emerald-900/30 border border-emerald-800/50 mb-6">
@@ -56,8 +27,16 @@ export default function HomePage() {
       {/* Status cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full max-w-xl mb-12">
         <StatusIndicator label="Frontend" status="online" />
-        <StatusIndicator label="Backend API" status="checking" apiUrl="/health" />
-        <StatusIndicator label="Database" status="checking" apiUrl="/health/ready" />
+        <StatusIndicator
+          label="Backend API"
+          status="checking"
+          apiUrl="/health"
+        />
+        <StatusIndicator
+          label="Database"
+          status="checking"
+          apiUrl="/health/ready"
+        />
       </div>
 
       {/* Nav links — we'll fill these in Week 7 */}
@@ -81,9 +60,7 @@ export default function HomePage() {
       </nav>
 
       {/* Version footer */}
-      <p className="mt-16 text-xs text-gray-600">
-        v0.1.0 · Week 1 skeleton
-      </p>
+      <p className="mt-16 text-xs text-gray-600">v0.1.0 · Week 1 skeleton</p>
     </main>
   );
 }
