@@ -1,0 +1,36 @@
+### ═══════════════════════════════════════════════════════
+###  AEQUITAS — API Test Requests
+###  How to use: click "Send Request" above any ### block
+###  Make sure `make dev` is running first
+### ═══════════════════════════════════════════════════════
+
+@baseUrl = http://localhost:8000
+@ticker = AAPL
+
+### ── Health ─────────────────────────────────────────────
+
+### Liveness check
+GET {{baseUrl}}/health
+
+### Readiness check
+GET {{baseUrl}}/health/ready
+
+### ── Market Data ─────────────────────────────────────────
+
+### 1. Ingest AAPL data — run this first
+POST {{baseUrl}}/api/v1/market-data/{{ticker}}/ingest?period=1y&interval=1d
+
+### 2. Get stored OHLCV bars
+GET {{baseUrl}}/api/v1/market-data/{{ticker}}/bars?limit=5
+
+### 3. Get company info
+GET {{baseUrl}}/api/v1/market-data/{{ticker}}/info
+
+### 4. Try a different ticker
+POST {{baseUrl}}/api/v1/market-data/SPY/ingest?period=6mo&interval=1d
+
+### 5. Get SPY bars
+GET {{baseUrl}}/api/v1/market-data/SPY/bars?limit=10
+
+### 6. Get more bars (full year)
+GET {{baseUrl}}/api/v1/market-data/{{ticker}}/bars?limit=252

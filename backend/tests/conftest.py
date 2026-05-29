@@ -53,7 +53,7 @@ def client(app):  # noqa: ANN201
 
 
 @pytest.fixture
-async def async_client(app) -> AsyncGenerator[AsyncClient, None]:
+async def async_client(app) -> AsyncGenerator[AsyncClient]:
     """
     Async test client.
 
