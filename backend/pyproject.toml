@@ -26,6 +26,7 @@ dependencies = [
     "yfinance==0.2.61",
     "pandas==2.2.3",
     "numpy==2.2.1",
+    "scipy==1.17.1",
 ]
 
 [project.optional-dependencies]
@@ -46,12 +47,12 @@ where = ["."]
 include = ["app*"]
 
 [tool.ruff]
-target-version = "py313"
+target-version = "py313" # matches requires-python
 line-length = 88
 
 [tool.ruff.lint]
 select = ["E", "W", "F", "I", "B", "C4", "UP", "N"]
-ignore = ["E501", "B008"]
+ignore = ["E501", "B008", "N806", "B007"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["app"]
@@ -61,7 +62,7 @@ quote-style = "double"
 indent-style = "space"
 
 [tool.mypy]
-python_version = "3.12"
+python_version = "3.13"       # matches requires-python
 strict = false
 warn_return_any = true
 warn_unused_configs = true
