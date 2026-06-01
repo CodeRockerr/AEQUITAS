@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "aequitas-backend"
-version = "0.2.0"
+version = "0.4.0"
 description = "AEQUITAS — Agentic Quant Research Platform"
 requires-python = ">=3.13"
 
@@ -26,7 +26,13 @@ dependencies = [
     "yfinance==0.2.61",
     "pandas==2.2.3",
     "numpy==2.2.1",
-    "scipy==1.17.1",
+    # ── Week 3: pricing & risk ─────────────────────────────────
+    "scipy==1.15.2",
+    # ── Week 4: ML models ──────────────────────────────────────
+    "xgboost==2.1.3",
+    "scikit-learn==1.6.1",
+    "shap==0.46.0",
+    "hmmlearn==0.3.3",
 ]
 
 [project.optional-dependencies]
@@ -47,7 +53,7 @@ where = ["."]
 include = ["app*"]
 
 [tool.ruff]
-target-version = "py313" # matches requires-python
+target-version = "py313"
 line-length = 88
 
 [tool.ruff.lint]
@@ -62,7 +68,7 @@ quote-style = "double"
 indent-style = "space"
 
 [tool.mypy]
-python_version = "3.13"       # matches requires-python
+python_version = "3.13"
 strict = false
 warn_return_any = true
 warn_unused_configs = true
