@@ -11,7 +11,7 @@ from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api.v1 import health, market_data, pricing
+from app.api.v1 import health, market_data, ml, pricing
 from app.config import settings
 
 log = structlog.get_logger()
@@ -28,7 +28,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="AEQUITAS",
         description="Agentic Equity & Quantitative Intelligence Trading Analysis System",
-        version="0.3.0",
+        version="0.4.0",
         docs_url="/docs" if settings.is_development else None,
         redoc_url="/redoc" if settings.is_development else None,
         lifespan=lifespan,
@@ -72,6 +72,7 @@ def create_app() -> FastAPI:
     app.include_router(health.router, tags=["health"])
     app.include_router(market_data.router, tags=["market-data"])
     app.include_router(pricing.router, tags=["pricing-risk"])
+    app.include_router(ml.router, tags=["ml"])
 
     return app
 
