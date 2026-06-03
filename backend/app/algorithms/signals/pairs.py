@@ -112,14 +112,8 @@ def kalman_hedge_ratio(
     prices_b: np.ndarray,
     delta: float = 1e-4,
 ) -> np.ndarray:
-    """
-    Dynamic hedge ratio via Kalman filter.
-
-    State:       β_t = β_{t-1} + w_t   (random walk)
-    Observation: A_t = β_t · B_t + v_t
-    """
     n = len(prices_a)
-    hedge_ratios = np.zeros(n, dtype=np.float64)
+    hedge_ratios_list: list[float] = []  # ← use list, no shape type issues
     x = np.zeros(2, dtype=np.float64)
     P = np.eye(2, dtype=np.float64)
     Q = delta * np.eye(2, dtype=np.float64)
@@ -135,11 +129,11 @@ def kalman_hedge_ratio(
         S = H @ P_pred @ H.T + R
         K = np.asarray(P_pred @ H.T @ np.linalg.inv(S), dtype=np.float64)
 
-        x = np.asarray(x + K.flatten() * innovation, dtype=np.float64)
-        P = np.asarray((np.eye(2) - K @ H) @ P_pred, dtype=np.float64)
-        hedge_ratios[t] = float(x[0])
+        x = np.asarray(x + K.flatten() * innovation, dtype=np.float64)  # type: ignore[assignment]
+        P = np.asarray((np.eye(2) - K @ H) @ P_pred, dtype=np.float64)  # type: ignore[assignment]
+        hedge_ratios_list.append(float(x[0]))  # ← append float
 
-    return hedge_ratios
+    return np.array(hedge_ratios_list, dtype=np.float64)  # ← convert at end
 
 
 def pairs_signal(
