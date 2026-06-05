@@ -35,7 +35,11 @@ dependencies = [
     "hmmlearn==0.3.3",
     # ── Week 5: signals & backtesting ─────────────────────────
     "statsmodels==0.14.4",
+    # ── Week 6: agentic layer ──────────────────────────────────
+    "langgraph==0.2.70",
+    "groq==0.11.0",
 ]
+
 
 [project.optional-dependencies]
 dev = [

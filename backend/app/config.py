@@ -28,7 +28,7 @@ class Settings(BaseSettings):
     """
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=["../.env", ".env"],  # ← look in parent dir first, then current
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
@@ -53,6 +53,8 @@ class Settings(BaseSettings):
     # ── AI / LLM ──────────────────────────────────────────────
     anthropic_api_key: str = Field(default="")
     anthropic_model: str = Field(default="claude-sonnet-4-20250514")
+    groq_api_key: str = Field(default="")
+    groq_model: str = Field(default="llama-3.3-70b-versatile")
 
     # ── Market data ───────────────────────────────────────────
     polygon_api_key: str = Field(default="")
