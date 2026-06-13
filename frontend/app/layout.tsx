@@ -1,20 +1,19 @@
-/**
- * AEQUITAS — Root layout
- *
- * In Next.js App Router, layout.tsx wraps every page.
- * This root layout sets the HTML shell, fonts, and global styles.
- * It renders once and persists across page navigations.
- */
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
-
-const inter = Inter({ subsets: ["latin"] });
+import { Sidebar } from "@/components/layout/Sidebar";
+import { ThemeProvider } from "@/components/layout/ThemeProvider";
 
 export const metadata: Metadata = {
-  title: "AEQUITAS",
+  title: { default: "AEQUITAS", template: "%s · AEQUITAS" },
   description:
     "Agentic Equity & Quantitative Intelligence Trading Analysis System",
+};
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#F7F6F2" },
+    { media: "(prefers-color-scheme: dark)", color: "#0C0C0A" },
+  ],
 };
 
 export default function RootLayout({
@@ -23,11 +22,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="dark">
-      <body
-        className={`${inter.className} bg-gray-950 text-gray-100 antialiased`}
-      >
-        {children}
+    <html lang="en" suppressHydrationWarning>
+      <body>
+        <ThemeProvider>
+          <div style={{ display: "flex", minHeight: "100vh" }}>
+            <Sidebar />
+            <main style={{ flex: 1, overflow: "auto" }}>{children}</main>
+          </div>
+        </ThemeProvider>
       </body>
     </html>
   );
