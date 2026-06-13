@@ -8,12 +8,14 @@ const config: Config = {
   ],
   theme: {
     extend: {
-      colors: {
-        background: "var(--background)",
-        foreground: "var(--foreground)",
+      fontFamily: {
+        serif: ["DM Serif Display", "Georgia", "serif"],
+        sans: ["Geist", "Helvetica Neue", "sans-serif"],
+        mono: ["JetBrains Mono", "Fira Code", "monospace"],
       },
     },
   },
   plugins: [],
 };
+
 export default config;
