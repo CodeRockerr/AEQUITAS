@@ -16,7 +16,7 @@ services:
       POSTGRES_PASSWORD: aequitas
       POSTGRES_DB: aequitas
     ports:
-      - "5432:5432"          # exposed so you can connect via SQLTools in VS Code
+      - "5433:5432"          # exposed so you can connect via SQLTools in VS Code
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
