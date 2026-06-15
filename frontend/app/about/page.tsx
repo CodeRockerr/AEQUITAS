@@ -632,7 +632,7 @@ export default function AboutPage() {
             >
               MS Computer Science · NC State University
               <br />
-              GPA 3.80 · AI/ML Research · Quant Systems
+              GPA 3.80 · AI/ML · Software Development · Research · Quant Systems
             </div>
             <div style={{ display: "flex", gap: "8px" }}>
               <a
@@ -645,13 +645,31 @@ export default function AboutPage() {
                 GitHub
               </a>
               <a
-                href="https://linkedin.com/in/aditshah"
+                href="https://www.linkedin.com/in/shahadit0404/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn btn-ghost"
                 style={{ fontSize: "11px", padding: "5px 12px" }}
               >
                 LinkedIn
+              </a>
+              <a
+                href="https://adit-2d-portfolio.vercel.app/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-ghost"
+                style={{ fontSize: "11px", padding: "5px 12px" }}
+              >
+                Portfolio
+              </a>
+              <a
+                href="https://drive.google.com/file/d/16_bFetVUPBOT01t3aSIqqDIR703DT7Lc/view?usp=sharing"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-ghost"
+                style={{ fontSize: "11px", padding: "5px 12px" }}
+              >
+                Resume
               </a>
             </div>
           </div>
