@@ -10,6 +10,7 @@ const NAV = [
   { href: "/backtests", label: "Backtests", icon: "◫" },
   { href: "/theses", label: "Theses", icon: "◧" },
   { href: "/risk", label: "Risk", icon: "◬" },
+  { href: "/about", label: "About", icon: "◉" },
 ];
 
 export function Sidebar() {
@@ -132,7 +133,6 @@ export function Sidebar() {
           gap: "8px",
         }}
       >
-        {/* Live indicator */}
         <div
           style={{
             display: "flex",
@@ -154,7 +154,6 @@ export function Sidebar() {
           </span>
         </div>
 
-        {/* Theme toggle */}
         <button
           onClick={toggle}
           style={{
@@ -178,7 +177,6 @@ export function Sidebar() {
           <span>{theme === "dark" ? "Light" : "Dark"}</span>
         </button>
 
-        {/* Version */}
         <div
           style={{
             fontFamily: "var(--font-mono)",
@@ -188,7 +186,7 @@ export function Sidebar() {
             letterSpacing: "0.04em",
           }}
         >
-          v0.6.0
+          v0.7.0
         </div>
       </div>
     </aside>
