@@ -1,6 +1,4 @@
-"""
-AEQUITAS — FastAPI application factory.
-"""
+"""AEQUITAS — FastAPI application factory."""
 
 import time
 from collections.abc import AsyncGenerator, Awaitable, Callable
@@ -11,7 +9,7 @@ from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api.v1 import agents, health, market_data, ml, pricing, signals
+from app.api.v1 import advanced, agents, health, market_data, ml, pricing, signals
 from app.config import settings
 
 log = structlog.get_logger()
@@ -19,7 +17,7 @@ log = structlog.get_logger()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
-    log.info("aequitas_starting", env=settings.app_env, debug=settings.app_debug)
+    log.info("aequitas_starting", env=settings.app_env)
     yield
     log.info("aequitas_shutting_down")
 
@@ -28,7 +26,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="AEQUITAS",
         description="Agentic Equity & Quantitative Intelligence Trading Analysis System",
-        version="0.6.0",
+        version="0.8.0",
         docs_url="/docs" if settings.is_development else None,
         redoc_url="/redoc" if settings.is_development else None,
         lifespan=lifespan,
@@ -49,13 +47,12 @@ def create_app() -> FastAPI:
     ) -> Response:
         start = time.perf_counter()
         response = await call_next(request)
-        duration_ms = round((time.perf_counter() - start) * 1000, 2)
         log.info(
             "http_request",
             method=request.method,
             path=request.url.path,
             status=response.status_code,
-            duration_ms=duration_ms,
+            duration_ms=round((time.perf_counter() - start) * 1000, 2),
         )
         return response
 
@@ -65,8 +62,7 @@ def create_app() -> FastAPI:
     ) -> JSONResponse:
         log.error("unhandled_exception", path=request.url.path, error=str(exc))
         return JSONResponse(
-            status_code=500,
-            content={"detail": "Internal server error"},
+            status_code=500, content={"detail": "Internal server error"}
         )
 
     app.include_router(health.router, tags=["health"])
@@ -75,6 +71,7 @@ def create_app() -> FastAPI:
     app.include_router(ml.router, tags=["ml"])
     app.include_router(signals.router, tags=["signals"])
     app.include_router(agents.router, tags=["agents"])
+    app.include_router(advanced.router, tags=["advanced"])
 
     return app
 
