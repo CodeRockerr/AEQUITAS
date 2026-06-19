@@ -2,7 +2,7 @@
 
 **Agentic Equity & Quantitative Intelligence Trading Analysis System**
 
-A full-stack quantitative research platform combining real financial algorithms, ML models, and an autonomous LLM agent pipeline to generate institutional-grade investment theses - automatically.
+A full-stack quantitative research platform combining real financial algorithms, ML models, and an autonomous LLM agent pipeline to generate institutional-grade investment theses — automatically.
 
 [![CI](https://github.com/CodeRockerr/AEQUITAS/actions/workflows/ci.yml/badge.svg)](https://github.com/CodeRockerr/AEQUITAS/actions)
 ![Python](https://img.shields.io/badge/Python-3.13-blue)
@@ -14,7 +14,7 @@ A full-stack quantitative research platform combining real financial algorithms,
 
 ## What is this?
 
-AEQUITAS is a personal research platform built to be both a serious portfolio project and the foundation of a real quant/fintech SaaS product. It ingests live market data, runs a battery of quantitative finance algorithms and ML models, then hands the results to a multi-agent LLM pipeline that researches a company, evaluates the data, and writes a structured investment thesis - citing sources and critiquing its own conclusions before presenting them.
+AEQUITAS is a personal research platform built to be both a serious portfolio project and the foundation of a real quant/fintech SaaS product. It ingests live market data, runs a battery of quantitative finance algorithms and ML models, then hands the results to a multi-agent LLM pipeline that researches a company, evaluates the data, and writes a structured investment thesis — citing sources and critiquing its own conclusions before presenting them.
 
 Everything in this repo is real, working, and tested. No mocked endpoints, no placeholder data once a ticker is ingested.
 
@@ -42,58 +42,58 @@ Everything in this repo is real, working, and tested. No mocked endpoints, no pl
 
 ## Architecture
 
+```mermaid
+flowchart TB
+    subgraph Frontend["Frontend — Next.js 14, TypeScript, Recharts"]
+        direction LR
+        F1["Overview"] --- F2["Dashboard"] --- F3["Backtests"] --- F4["Theses"] --- F5["Risk"] --- F6["About"]
+    end
+
+    subgraph API["API Layer — FastAPI, Pydantic v2, SQLAlchemy async"]
+        direction LR
+        A1["health"] --- A2["market-data"] --- A3["pricing-risk"] --- A4["ml"] --- A5["signals"] --- A6["agents"]
+    end
+
+    subgraph Algo["Algorithm Layer"]
+        direction TB
+        AL1["Pricing & Risk<br/>Black-Scholes · Greeks · VaR/CVaR · Monte Carlo"]
+        AL2["Portfolio<br/>Mean-variance optimiser"]
+        AL3["ML<br/>HMM regime · XGBoost + SHAP"]
+        AL4["Signals<br/>RSI/MACD/Bollinger · Pairs trading + Kalman filter"]
+        AL5["Factor Model & Execution<br/>Fama-French · TWAP/VWAP/IS"]
+        AL6["Backtester<br/>Vectorised, full tearsheet"]
+    end
+
+    subgraph Agent["Agent Layer"]
+        direction TB
+        AG1["LangGraph 4-node graph:<br/>research → quant → thesis_gen → critic"]
+        AG2["Groq LLM<br/>llama-3.3-70b-versatile"]
+    end
+
+    subgraph Data["Data Layer"]
+        direction TB
+        D1["yFinance ingestion"]
+        D2["TimescaleDB hypertables"]
+        D3["pgvector RAG over SEC filings"]
+    end
+
+    subgraph Storage["Storage"]
+        direction LR
+        S1[("PostgreSQL /<br/>TimescaleDB +<br/>pgvector")]
+        S2[("Redis")]
+    end
+
+    Frontend -->|"REST — typed client in lib/api.ts"| API
+    API --> Algo
+    API --> Agent
+    API --> Data
+    Algo --> Storage
+    Agent --> Storage
+    Data --> Storage
 ```
-┌─────────────────────────────────────────────────────────────┐
-│  Frontend — Next.js 14, TypeScript, Recharts                  │
-│  Pages: Overview · Dashboard · Backtests · Theses · Risk ·    │
-│         About                                                  │
-│  Dark/light theme · monospace data · serif headlines           │
-└───────────────────────────┬─────────────────────────────────┘
-                             │ REST (typed client in lib/api.ts)
-┌───────────────────────────▼─────────────────────────────────┐
-│  API Layer — FastAPI, Pydantic v2, SQLAlchemy async            │
-│  Routers: health · market-data · pricing-risk · ml ·           │
-│           signals · agents                                     │
-└───────────────────────────┬─────────────────────────────────┘
-                             │
-        ┌────────────────────┼────────────────────┐
-        ▼                    ▼                    ▼
-┌───────────────┐  ┌──────────────────┐  ┌──────────────────────┐
-│ Algorithm Layer │  │   Agent Layer     │  │     Data Layer        │
-│                  │  │                   │  │                        │
-│ Pricing & Risk   │  │ LangGraph 4-node  │  │ yFinance ingestion     │
-│ Black-Scholes    │  │ graph:            │  │ TimescaleDB hypertables│
-│ Greeks · VaR     │  │ research → quant  │  │ pgvector full-text RAG │
-│ CVaR · Monte     │  │ → thesis_gen →    │  │ over SEC filings       │
-│ Carlo            │  │ critic            │  │                        │
-│                  │  │                   │  │                        │
-│ Portfolio        │  │ Groq LLM          │  │                        │
-│ Mean-variance    │  │ (llama-3.3-70b)   │  │                        │
-│ optimiser        │  │                   │  │                        │
-│                  │  │                   │  │                        │
-│ ML               │  │                   │  │                        │
-│ HMM regime       │  │                   │  │                        │
-│ XGBoost + SHAP    │  │                   │  │                        │
-│                  │  │                   │  │                        │
-│ Signals          │  │                   │  │                        │
-│ RSI/MACD/Bollinger│  │                   │  │                        │
-│ Pairs trading +   │  │                   │  │                        │
-│ Kalman filter      │  │                   │  │                        │
-│                  │  │                   │  │                        │
-│ Backtester        │  │                   │  │                        │
-│ Vectorised, full   │  │                   │  │                        │
-│ tearsheet           │  │                   │  │                        │
-└───────────────┘  └──────────────────┘  └──────────────────────┘
-                             │
-                ┌────────────▼────────────┐
-                │ PostgreSQL/TimescaleDB    │
-                │ + pgvector  ·  Redis      │
-                └───────────────────────────┘
-```
+
 
 ---
-
-## Tech Stack
 
 | Layer | Technology |
 |---|---|
@@ -146,31 +146,34 @@ Everything in this repo is real, working, and tested. No mocked endpoints, no pl
 
 AEQUITAS's signature feature is a 4-node LangGraph agent that autonomously produces investment research:
 
-```
-START
-  │
-  ▼
-┌──────────────┐   Retrieves company info + SEC filing chunks via
-│   research    │   pgvector full-text search. Summarises via LLM.
-└──────┬───────┘
-       ▼
-┌──────────────┐   Computes live regime (HMM), momentum signal,
-│    quant      │   XGBoost forecast + SHAP, and VaR — using the
-└──────┬───────┘   real algorithm layer, not mocked data.
-       ▼
-┌──────────────┐   LLM synthesises a structured thesis: Overview,
-│  thesis_gen   │   Bull Case, Bear Case, Quant Evidence, Risk
-└──────┬───────┘   Factors, Verdict — citing the research above.
-       ▼
-┌──────────────┐   LLM critiques its own thesis: unsupported
-│    critic     │   claims, missing risks, inconsistencies with
-└──────┬───────┘   quant data. Loops back to research if revision
-       │           is needed (max 2 revisions).
-       ▼
-      END
+```mermaid
+flowchart TD
+    START(["START"]) --> research
+
+    research["<b>research</b><br/>Retrieves company info + SEC filing<br/>chunks via pgvector full-text search.<br/>Summarises via LLM."]
+    research --> quant
+
+    quant["<b>quant</b><br/>Computes live regime (HMM), momentum<br/>signal, XGBoost forecast + SHAP, and<br/>VaR — using the real algorithm layer,<br/>not mocked data."]
+    quant --> thesis_gen
+
+    thesis_gen["<b>thesis_gen</b><br/>LLM synthesises a structured thesis:<br/>Overview, Bull Case, Bear Case, Quant<br/>Evidence, Risk Factors, Verdict —<br/>citing the research above."]
+    thesis_gen --> critic
+
+    critic["<b>critic</b><br/>LLM critiques its own thesis:<br/>unsupported claims, missing risks,<br/>inconsistencies with quant data."]
+
+    critic -->|"revision needed<br/>(max 2 loops)"| research
+    critic -->|"approved"| END(["END"])
+
+    style START fill:#1A6B4A,color:#fff
+    style END fill:#1A6B4A,color:#fff
+    style research fill:#EAF0FB,color:#111
+    style quant fill:#EAF0FB,color:#111
+    style thesis_gen fill:#EAF0FB,color:#111
+    style critic fill:#FBF4E6,color:#111
 ```
 
 This isn't a single prompt to an LLM — it's a stateful graph where each node does real computational work, and the critic node has caught genuine issues in testing (e.g. flagging a bullish verdict that contradicted bearish quant signals).
+
 
 ---
 
@@ -392,13 +395,15 @@ The long-term vision is a full multi-tenant SaaS product, not just a demo. Targe
 ## Author
 
 **Adit Shah**
-MS Computer Science, NC State University
+MS Computer Science, NC State University (GPA 3.80)
+AI-Assisted Learning Lab — Graduate Researcher
 
-- GitHub: [@CodeRockerr](https://github.com/CodeRockerr)
-- LinkedIn: (https://www.linkedin.com/in/shah-adit0404/)
-- Portfolio: (https://adit-2d-portfolio.vercel.app/)
+- GitHub: [@GitHub](https://github.com/CodeRockerr)
+- LinkedIn: [@LinkedIn](https://www.linkedin.com/in/shah-adit0404/)
+- Portfolio: [@Portfolio](https://adit-2d-portfolio.vercel.app/)
+- Resume: [@Resume](https://drive.google.com/file/d/16_bFetVUPBOT01t3aSIqqDIR703DT7Lc/view?usp=sharing)
 
-Built as a deep-dive into production quantitative systems, agentic AI architecture, and full-stack engineering with the explicit goal of being both a credible job-application portfolio piece and the seed of a real fintech product.
+Built as a deep-dive into production quantitative systems, agentic AI architecture, and full-stack engineering — with the explicit goal of being both a credible job-application portfolio piece and the seed of a real fintech product.
 
 ---
 
