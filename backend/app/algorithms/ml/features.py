@@ -88,8 +88,9 @@ def compute_features(df: pd.DataFrame) -> pd.DataFrame:
 
     # ── Price levels ──────────────────────────────────────────
     # Distance from 52-week high/low — mean reversion signals
-    high_52w = high.rolling(252).max()
-    low_52w = low.rolling(252).min()
+    lookback_window = min(252, max(len(feat) - 1, 1))
+    high_52w = high.rolling(lookback_window, min_periods=1).max()
+    low_52w = low.rolling(lookback_window, min_periods=1).min()
     feat["dist_52w_high"] = (close - high_52w) / high_52w
     feat["dist_52w_low"] = (close - low_52w) / low_52w
 
