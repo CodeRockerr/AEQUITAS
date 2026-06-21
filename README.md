@@ -7,7 +7,7 @@ A full-stack quantitative research platform combining real financial algorithms,
 [![CI](https://github.com/CodeRockerr/AEQUITAS/actions/workflows/ci.yml/badge.svg)](https://github.com/CodeRockerr/AEQUITAS/actions)
 ![Python](https://img.shields.io/badge/Python-3.13-blue)
 ![Node](https://img.shields.io/badge/Node-20-green)
-![Tests](https://img.shields.io/badge/tests-120%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-121%20passing-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-lightgrey)
 
 ---
@@ -18,8 +18,8 @@ AEQUITAS is a personal research platform built to be both a serious portfolio pr
 
 Everything in this repo is real, working, and tested. No mocked endpoints, no placeholder data once a ticker is ingested.
 
-**Live demo:** _(add Vercel URL here once deployed)_
-**API docs:** _(add Railway URL + `/docs` once deployed)_
+**Live demo:** [aequitas-three.vercel.app](https://aequitas-three.vercel.app)
+**API docs:** [aequitas-production-993d.up.railway.app/docs](https://aequitas-production-993d.up.railway.app/docs)
 
 ---
 
@@ -92,6 +92,17 @@ flowchart TB
     Data --> Storage
 ```
 
+### Production Deployment
+
+| Service | Platform | Notes |
+|---|---|---|
+| Frontend | Vercel | Auto-deploys on push to `main`, root directory `frontend` |
+| Backend (FastAPI) | Railway | Auto-deploys on push to `main`, root directory `backend`, `railway.json` pins the start command |
+| Database | Railway (Docker image) | `timescale/timescaledb-ha:pg16` — real TimescaleDB + pgvector + timescaledb_toolkit, not Railway's managed Postgres (which doesn't support the TimescaleDB extension) |
+| Cache | Railway managed Redis | |
+
+The database runs as a custom Docker-image service rather than Railway's one-click Postgres, since managed Postgres offerings (Railway, vanilla RDS) don't ship with the TimescaleDB extension. Running the official `timescaledb-ha` image keeps local Docker Compose and production identical.
+
 
 ---
 
@@ -109,7 +120,7 @@ flowchart TB
 | **Linting** | Ruff (backend), ESLint (frontend) |
 | **Type Checking** | Mypy (backend), TypeScript strict (frontend) |
 | **Testing** | Pytest + pytest-asyncio (97 tests) |
-| **Deployment (planned)** | Vercel (frontend) + Railway (backend/DB/Redis) |
+| **Deployment** | Vercel (frontend) + Railway (backend, TimescaleDB via Docker image, Redis) — **live** |
 
 ---
 
@@ -125,6 +136,7 @@ flowchart TB
 - **Hidden Markov Model** regime detector — classifies market state as Bull / Bear / High-Volatility
 - **XGBoost return forecaster** trained with `TimeSeriesSplit` (zero lookahead bias), explained via **SHAP**
 - 19-feature engineering pipeline (returns, volatility, RSI, MACD, distance from 52-week high/low, volume ratios, etc.)
+- 52-week high/low features use `rolling(window, min_periods=1)` with a dynamically capped window, so the pipeline degrades gracefully for tickers with less than 252 days of history instead of dropping every row to `NaN`
 
 ### Signals
 - **Momentum signals**: RSI, MACD, Bollinger Bands — each normalised to `[-1, +1]` and combinable into a single weighted score
@@ -211,7 +223,7 @@ AEQUITAS/
 │   │   ├── db.py                    # async engine + session factory
 │   │   └── main.py                  # FastAPI app factory
 │   ├── alembic/versions/            # database migrations
-│   ├── tests/unit/                  # 97 pytest tests
+│   ├── tests/unit/                  # 121 pytest tests
 │   └── pyproject.toml
 ├── frontend/
 │   ├── app/
@@ -230,6 +242,7 @@ AEQUITAS/
 ├── infra/
 │   └── docker-compose.yml
 ├── .github/workflows/ci.yml
+├── railway.json                     # pins backend start command for Railway deploys
 └── README.md
 ```
 
@@ -347,7 +360,7 @@ mypy app
 pytest tests/unit/ -v
 ```
 
-**~120 tests passing** across pricing, risk, portfolio optimisation, ML models, signals, pairs trading, Fama-French factor model, TWAP/VWAP/Implementation Shortfall execution algorithms, backtesting, and agent components.
+**121 tests passing** across pricing, risk, portfolio optimisation, ML models, signals, pairs trading, Fama-French factor model, TWAP/VWAP/Implementation Shortfall execution algorithms, backtesting, and agent components.
 
 ---
 
@@ -375,9 +388,9 @@ AEQUITAS started as an 8-week portfolio project but is being extended into a ful
 - [x] **Week 6** — Agentic layer: LangGraph 4-node graph, pgvector RAG, Groq LLM, critic revision loop
 - [x] **Week 7** — Frontend: full dashboard with dark/light theme, 6 pages, About/landing page
 - [x] **Week 8** — Advanced algorithms: Fama-French 3-factor model, TWAP/VWAP/Implementation Shortfall execution algorithms
+- [x] **Week 9** — Production deployment: Vercel (frontend) + Railway (FastAPI backend, real TimescaleDB via Docker image, Redis), CORS wired end-to-end, fixed a production-only feature engineering bug (52-week rolling window required exactly 252+ rows; now degrades gracefully)
 
 ### In Progress / Next
-- [ ] **Deploy** — Vercel (frontend) + Railway (backend/DB/Redis), get a live public URL
 - [ ] **Advanced agents** — Earnings call analysis agent, news sentiment agent, portfolio construction agent
 
 ### Planned — Enterprise SaaS Phase
@@ -395,8 +408,7 @@ The long-term vision is a full multi-tenant SaaS product, not just a demo. Targe
 ## Author
 
 **Adit Shah**
-MS Computer Science, NC State University (GPA 3.80)
-AI-Assisted Learning Lab — Graduate Researcher
+MS Computer Science, NC State University
 
 - GitHub: [@GitHub](https://github.com/CodeRockerr)
 - LinkedIn: [@LinkedIn](https://www.linkedin.com/in/shah-adit0404/)
