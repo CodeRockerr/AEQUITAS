@@ -13,6 +13,12 @@ unofficial rate limits even as the number of watched tickers grows —
 we never poll a ticker nobody is currently viewing.
 
 If a ticker has zero subscribers, its refresh loop stops automatically.
+
+Market-closed handling:
+  yfinance's fast_info can return stale/zero values when markets are
+  closed (weekends, holidays, pre-market). When that happens, we fall
+  back to the most recent daily close stored in our own database,
+  so the UI always shows the last known real price instead of a gap.
 """
 
 import asyncio
@@ -22,6 +28,10 @@ from dataclasses import dataclass, field
 import structlog
 import yfinance as yf  # type: ignore[import-untyped]
 from fastapi import WebSocket
+from sqlalchemy import select
+
+from app.db import AsyncSessionLocal
+from app.models.market_data import OHLCVBar
 
 log = structlog.get_logger()
 
@@ -40,6 +50,7 @@ class TickerSubscription:
     last_price: float | None = None
     last_change_pct: float | None = None
     last_updated: float = field(default_factory=time.time)
+    is_live: bool = True  # False when using fallback DB price (market closed)
     refresh_task: asyncio.Task | None = None
 
 
@@ -61,6 +72,9 @@ class PriceStreamManager:
         If this is the first subscriber for this ticker, starts a
         background refresh loop. Otherwise just adds to existing
         connection set.
+
+        Immediately sends a snapshot (live or last-known) so the
+        client doesn't wait a full refresh cycle for first data.
         """
         ticker = ticker.upper()
         async with self._lock:
@@ -74,6 +88,42 @@ class PriceStreamManager:
             if sub.refresh_task is None or sub.refresh_task.done():
                 sub.refresh_task = asyncio.create_task(self._refresh_loop(ticker))
                 log.info("price_stream_loop_started", ticker=ticker)
+
+        # Send an immediate snapshot rather than waiting for the next tick
+        await self._send_immediate_snapshot(ticker, ws)
+
+    async def _send_immediate_snapshot(self, ticker: str, ws: WebSocket) -> None:
+        """Fetch and send a price right away on subscribe, instead of waiting."""
+        try:
+            price_data = await self._fetch_price_with_fallback(ticker)
+        except Exception as e:
+            log.warning("price_stream_snapshot_failed", ticker=ticker, error=str(e))
+            return
+
+        if price_data is None:
+            return
+
+        price, change_pct, is_live = price_data
+        sub = self._subscriptions.get(ticker)
+        if sub is not None:
+            sub.last_price = price
+            sub.last_change_pct = change_pct
+            sub.is_live = is_live
+            sub.last_updated = time.time()
+
+        try:
+            await ws.send_json(
+                {
+                    "type": "price_update",
+                    "ticker": ticker,
+                    "price": price,
+                    "change_pct": change_pct,
+                    "is_live": is_live,
+                    "timestamp": time.time(),
+                }
+            )
+        except Exception:
+            pass
 
     async def unsubscribe(self, ticker: str, ws: WebSocket) -> None:
         """
@@ -135,7 +185,7 @@ class PriceStreamManager:
                 zero_subscriber_since = None
 
             try:
-                price_data = await self._fetch_price(ticker)
+                price_data = await self._fetch_price_with_fallback(ticker)
             except Exception as e:
                 log.warning("price_stream_fetch_failed", ticker=ticker, error=str(e))
                 continue
@@ -143,14 +193,36 @@ class PriceStreamManager:
             if price_data is None:
                 continue
 
-            price, change_pct = price_data
+            price, change_pct, is_live = price_data
             sub.last_price = price
             sub.last_change_pct = change_pct
+            sub.is_live = is_live
             sub.last_updated = time.time()
 
-            await self._broadcast(sub, price, change_pct)
+            await self._broadcast(sub, price, change_pct, is_live)
 
-    async def _fetch_price(self, ticker: str) -> tuple[float, float] | None:
+    async def _fetch_price_with_fallback(
+        self, ticker: str
+    ) -> tuple[float, float, bool] | None:
+        """
+        Fetch current price, falling back to the last known daily
+        close from our own database when the live feed has nothing
+        (market closed, weekend, holiday, or yfinance hiccup).
+
+        Returns (price, change_pct, is_live) or None if neither
+        source has any data at all.
+        """
+        live = await self._fetch_price_live(ticker)
+        if live is not None:
+            return live[0], live[1], True
+
+        fallback = await self._fetch_price_from_db(ticker)
+        if fallback is not None:
+            return fallback[0], fallback[1], False
+
+        return None
+
+    async def _fetch_price_live(self, ticker: str) -> tuple[float, float] | None:
         """
         Fetch current price and % change from yFinance.
 
@@ -177,11 +249,48 @@ class PriceStreamManager:
         except Exception:
             return None
 
+    async def _fetch_price_from_db(self, ticker: str) -> tuple[float, float] | None:
+        """
+        Fall back to the two most recent daily closes already stored
+        in TimescaleDB — used when markets are closed and yfinance's
+        live feed has nothing current to offer.
+
+        change_pct here is computed from the last two stored closes,
+        i.e. the most recent completed trading day's move.
+        """
+        try:
+            async with AsyncSessionLocal() as db:
+                result = await db.execute(
+                    select(OHLCVBar.close)
+                    .where(OHLCVBar.ticker == ticker, OHLCVBar.interval == "1d")
+                    .order_by(OHLCVBar.time.desc())
+                    .limit(2)
+                )
+                rows = result.scalars().all()
+        except Exception as e:
+            log.warning("price_stream_db_fallback_failed", ticker=ticker, error=str(e))
+            return None
+
+        if not rows:
+            return None
+
+        latest = float(rows[0])
+        if len(rows) < 2:
+            return round(latest, 4), 0.0
+
+        previous = float(rows[1])
+        if previous <= 0:
+            return round(latest, 4), 0.0
+
+        change_pct = ((latest - previous) / previous) * 100
+        return round(latest, 4), round(change_pct, 4)
+
     async def _broadcast(
         self,
         sub: TickerSubscription,
         price: float,
         change_pct: float,
+        is_live: bool,
     ) -> None:
         """Send price update to every connection subscribed to this ticker."""
         message = {
@@ -189,6 +298,7 @@ class PriceStreamManager:
             "ticker": sub.ticker,
             "price": price,
             "change_pct": change_pct,
+            "is_live": is_live,
             "timestamp": time.time(),
         }
 

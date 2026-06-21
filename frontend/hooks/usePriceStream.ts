@@ -6,10 +6,14 @@
  * Opens one WebSocket connection and lets you subscribe to
  * multiple tickers. Automatically reconnects on disconnect.
  *
+ * isLive distinguishes a genuinely live tick from a fallback
+ * last-known-close (used when markets are closed — weekends,
+ * holidays, after hours).
+ *
  * Usage:
  *   const { prices, subscribe, unsubscribe, connected } = usePriceStream();
  *   useEffect(() => { subscribe("AAPL"); return () => unsubscribe("AAPL"); }, []);
- *   const aaplPrice = prices["AAPL"];  // { price, changePct, timestamp }
+ *   const aapl = prices["AAPL"];  // { price, changePct, timestamp, isLive }
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -24,6 +28,7 @@ export interface LivePrice {
   price: number;
   changePct: number;
   timestamp: number;
+  isLive: boolean;
 }
 
 interface ServerMessage {
@@ -31,6 +36,7 @@ interface ServerMessage {
   ticker?: string;
   price?: number;
   change_pct?: number;
+  is_live?: boolean;
   timestamp?: number;
   message?: string;
 }
@@ -71,6 +77,7 @@ export function usePriceStream() {
               price: msg.price as number,
               changePct: msg.change_pct ?? 0,
               timestamp: msg.timestamp ?? Date.now() / 1000,
+              isLive: msg.is_live ?? true,
             },
           }));
         }

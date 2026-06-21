@@ -3,8 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { healthApi } from "@/lib/api";
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+import { usePriceStream } from "@/hooks/usePriceStream";
 
 const TICKER_LIST = [
   "AAPL",
@@ -19,20 +18,12 @@ const TICKER_LIST = [
   "JPM",
 ];
 
-interface TickerPrice {
-  ticker: string;
-  price: number | null;
-  change: number | null;
-}
-
 export default function HomePage() {
   const [status, setStatus] = useState<"checking" | "online" | "offline">(
     "checking",
   );
   const [version, setVersion] = useState("—");
-  const [prices, setPrices] = useState<TickerPrice[]>(
-    TICKER_LIST.map((t) => ({ ticker: t, price: null, change: null })),
-  );
+  const { prices, subscribe, unsubscribe, connected } = usePriceStream();
 
   useEffect(() => {
     healthApi
@@ -44,80 +35,71 @@ export default function HomePage() {
       .catch(() => setStatus("offline"));
   }, []);
 
-  // Fetch real prices from our market data endpoint
+  // Subscribe to all ticker-tape symbols on mount, unsubscribe on unmount
   useEffect(() => {
-    async function fetchPrices() {
-      const results = await Promise.allSettled(
-        TICKER_LIST.map(async (ticker) => {
-          const res = await fetch(
-            `${API_BASE}/api/v1/market-data/${ticker}/bars?limit=2&interval=1d`,
-            { cache: "no-store" },
-          );
-          if (!res.ok) return { ticker, price: null, change: null };
-          const bars = (await res.json()) as Array<{ close: string }>;
-          if (bars.length < 2)
-            return {
-              ticker,
-              price: parseFloat(bars[0]?.close ?? "0"),
-              change: null,
-            };
-          const price = parseFloat(bars[bars.length - 1].close);
-          const prev = parseFloat(bars[bars.length - 2].close);
-          const change = ((price - prev) / prev) * 100;
-          return { ticker, price, change };
-        }),
-      );
-      setPrices(
-        results.map((r, i) =>
-          r.status === "fulfilled"
-            ? r.value
-            : { ticker: TICKER_LIST[i], price: null, change: null },
-        ),
-      );
-    }
-    void fetchPrices();
-    const id = setInterval(() => void fetchPrices(), 60_000);
-    return () => clearInterval(id);
+    for (const ticker of TICKER_LIST) subscribe(ticker);
+    return () => {
+      for (const ticker of TICKER_LIST) unsubscribe(ticker);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const tickerItems = [...prices, ...prices].map((p, i) => (
-    <span
-      key={i}
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: "8px",
-        padding: "0 24px",
-        fontFamily: "var(--font-mono)",
-        fontSize: "11px",
-        flexShrink: 0,
-      }}
-    >
-      <span style={{ color: "var(--text-secondary)", letterSpacing: "0.06em" }}>
-        {p.ticker}
-      </span>
-      {p.price !== null ? (
-        <>
-          <span style={{ color: "var(--text-primary)" }}>
-            ${p.price.toFixed(2)}
-          </span>
-          {p.change !== null && (
+  const tickerItems = [...TICKER_LIST, ...TICKER_LIST].map((ticker, i) => {
+    const live = prices[ticker];
+    return (
+      <span
+        key={i}
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: "8px",
+          padding: "0 24px",
+          fontFamily: "var(--font-mono)",
+          fontSize: "11px",
+          flexShrink: 0,
+          opacity: live && !live.isLive ? 0.6 : 1,
+        }}
+      >
+        <span
+          style={{ color: "var(--text-secondary)", letterSpacing: "0.06em" }}
+        >
+          {ticker}
+        </span>
+        {live ? (
+          <>
+            <span style={{ color: "var(--text-primary)" }}>
+              ${live.price.toFixed(2)}
+            </span>
             <span
               style={{
                 color:
-                  p.change >= 0 ? "var(--accent-green)" : "var(--accent-red)",
+                  live.changePct >= 0
+                    ? "var(--accent-green)"
+                    : "var(--accent-red)",
               }}
             >
-              {p.change >= 0 ? "▲" : "▼"}
-              {Math.abs(p.change).toFixed(2)}%
+              {live.changePct >= 0 ? "▲" : "▼"}
+              {Math.abs(live.changePct).toFixed(2)}%
             </span>
-          )}
-        </>
-      ) : (
-        <span style={{ color: "var(--border-strong)" }}>—</span>
-      )}
-    </span>
-  ));
+            {!live.isLive && (
+              <span
+                style={{
+                  color: "var(--text-tertiary)",
+                  fontSize: "9px",
+                  letterSpacing: "0.04em",
+                  textTransform: "uppercase",
+                }}
+              >
+                closed
+              </span>
+            )}
+          </>
+        ) : (
+          <span style={{ color: "var(--border-strong)" }}>—</span>
+        )}
+      </span>
+    );
+  });
 
   const FEATURES = [
     {
@@ -182,7 +164,14 @@ export default function HomePage() {
               marginBottom: "20px",
             }}
           >
-            <span className="live-dot" />
+            <span
+              className="live-dot"
+              style={{
+                background: connected
+                  ? "var(--accent-green)"
+                  : "var(--accent-red)",
+              }}
+            />
             <span
               style={{
                 fontFamily: "var(--font-mono)",
@@ -197,6 +186,8 @@ export default function HomePage() {
                 : status === "offline"
                   ? "API Offline"
                   : "Connecting..."}
+              {" · "}
+              {connected ? "Live feed connected" : "Reconnecting feed..."}
             </span>
           </div>
 
@@ -259,7 +250,7 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Ticker tape — real prices */}
+      {/* Ticker tape — real WebSocket-pushed prices, refreshed every ~12s */}
       <div
         className="ticker-wrap"
         style={{ padding: "8px 0", background: "var(--bg-elevated)" }}
@@ -373,12 +364,12 @@ export default function HomePage() {
           }}
         >
           {[
-            { v: "87", l: "Unit Tests" },
-            { v: "12", l: "Algorithms" },
+            { v: "121", l: "Unit Tests" },
+            { v: "13", l: "Algorithms" },
             { v: "4", l: "Agent Nodes" },
             { v: "3", l: "ML Models" },
-            { v: "6", l: "API Routers" },
-            { v: "v0.7", l: "Version" },
+            { v: "7", l: "API Routers" },
+            { v: "v0.9", l: "Version" },
           ].map(({ v, l }) => (
             <div
               key={l}

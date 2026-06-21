@@ -115,7 +115,7 @@ async def test_broadcast_sends_to_all_connections(manager: PriceStreamManager) -
     ws1, ws2 = FakeWebSocket(), FakeWebSocket()
     sub = TickerSubscription(ticker="AAPL", connections={ws1, ws2})  # type: ignore[arg-type]
 
-    await manager._broadcast(sub, price=211.5, change_pct=1.2)
+    await manager._broadcast(sub, price=211.5, change_pct=1.2, is_live=True)
 
     assert ws1.sent_messages[0]["ticker"] == "AAPL"
     assert ws1.sent_messages[0]["price"] == 211.5
@@ -136,7 +136,7 @@ async def test_broadcast_removes_dead_connections(manager: PriceStreamManager) -
         connections={ws_dead, ws_alive},  # type: ignore[arg-type]
     )
 
-    await manager._broadcast(sub, price=100.0, change_pct=0.5)
+    await manager._broadcast(sub, price=100.0, change_pct=0.5, is_live=True)
 
     assert ws_dead not in sub.connections
     assert ws_alive in sub.connections
@@ -146,4 +146,51 @@ async def test_broadcast_removes_dead_connections(manager: PriceStreamManager) -
 def test_fetch_price_sync_handles_invalid_ticker() -> None:
     """Invalid/delisted tickers should return None, not raise."""
     result = PriceStreamManager._fetch_price_sync("ZZZZZZINVALID")
+    assert result is None
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_fetch_with_fallback_uses_db_when_live_fails(
+    manager: PriceStreamManager,
+) -> None:
+    """
+    When the live yfinance fetch returns None (e.g. market closed),
+    the manager should fall back to the database and mark is_live=False.
+    """
+    manager._fetch_price_live = AsyncMock(return_value=None)  # type: ignore[method-assign]
+    manager._fetch_price_from_db = AsyncMock(return_value=(190.5, -0.3))  # type: ignore[method-assign]
+
+    result = await manager._fetch_price_with_fallback("AAPL")
+
+    assert result == (190.5, -0.3, False)
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_fetch_with_fallback_prefers_live_when_available(
+    manager: PriceStreamManager,
+) -> None:
+    """When live data is available, it should be used (is_live=True),
+    and the DB fallback should never be queried."""
+    manager._fetch_price_live = AsyncMock(return_value=(211.5, 1.2))  # type: ignore[method-assign]
+    manager._fetch_price_from_db = AsyncMock(return_value=(190.5, -0.3))  # type: ignore[method-assign]
+
+    result = await manager._fetch_price_with_fallback("AAPL")
+
+    assert result == (211.5, 1.2, True)
+    manager._fetch_price_from_db.assert_not_called()
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_fetch_with_fallback_returns_none_when_both_fail(
+    manager: PriceStreamManager,
+) -> None:
+    """If neither live nor DB has any data, return None entirely."""
+    manager._fetch_price_live = AsyncMock(return_value=None)  # type: ignore[method-assign]
+    manager._fetch_price_from_db = AsyncMock(return_value=None)  # type: ignore[method-assign]
+
+    result = await manager._fetch_price_with_fallback("ZZZZZ")
+
     assert result is None

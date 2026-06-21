@@ -5,7 +5,8 @@ Protocol:
   Client connects to /ws/prices
   Client sends: {"action": "subscribe", "ticker": "AAPL"}
   Client sends: {"action": "unsubscribe", "ticker": "AAPL"}
-  Server sends: {"type": "price_update", "ticker": "AAPL", "price": 211.5, "change_pct": 1.2, "timestamp": ...}
+  Server sends: {"type": "price_update", "ticker": "AAPL", "price": 211.5, "change_pct": 1.2, "is_live": true, "timestamp": ...}
+                 (is_live=false means market is closed — price is the last known daily close, not a live tick)
   Server sends: {"type": "subscribed", "ticker": "AAPL"}
   Server sends: {"type": "error", "message": "..."}
 
