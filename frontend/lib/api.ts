@@ -198,3 +198,28 @@ export const pricingApi = {
       body: JSON.stringify(params),
     }),
 };
+
+// ── Add this to lib/api.ts ─────────────────────────────────────
+
+export interface Candle {
+  time: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
+export interface HistoryResponse {
+  ticker: string;
+  range: string;
+  candles: Candle[];
+  n_candles: number;
+  first_date: string | null;
+  last_date: string | null;
+}
+
+export const historyApi = {
+  get: (ticker: string, range: "1mo" | "6mo" | "1y" | "5y" | "max" = "1y") =>
+    apiFetch<HistoryResponse>(`/api/v1/history/${ticker}?range_=${range}`),
+};

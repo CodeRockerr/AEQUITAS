@@ -13,6 +13,7 @@ from app.api.v1 import (
     advanced,
     agents,
     health,
+    history,
     market_data,
     ml,
     pricing,
@@ -35,7 +36,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="AEQUITAS",
         description="Agentic Equity & Quantitative Intelligence Trading Analysis System",
-        version="0.9.0",
+        version="0.9.1",
         docs_url="/docs" if settings.is_development else None,
         redoc_url="/redoc" if settings.is_development else None,
         lifespan=lifespan,
@@ -82,6 +83,7 @@ def create_app() -> FastAPI:
     app.include_router(agents.router, tags=["agents"])
     app.include_router(advanced.router, tags=["advanced"])
     app.include_router(websocket.router, tags=["websocket"])
+    app.include_router(history.router, tags=["history"])
 
     return app
 
