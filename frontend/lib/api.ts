@@ -18,7 +18,7 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-// ── Types ─────────────────────────────────────────────────────
+// ── Health ───────────────────────────────────────────────────
 export interface HealthResponse {
   status: string;
   env: string;
@@ -27,6 +27,11 @@ export interface HealthResponse {
   timestamp: string;
 }
 
+export const healthApi = {
+  check: () => apiFetch<HealthResponse>("/health"),
+};
+
+// ── Signals ──────────────────────────────────────────────────
 export interface SignalResponse {
   ticker: string;
   combined_signal: number;
@@ -38,6 +43,12 @@ export interface SignalResponse {
   };
 }
 
+export const signalsApi = {
+  get: (ticker: string) =>
+    apiFetch<SignalResponse>(`/api/v1/signals/${ticker}`),
+};
+
+// ── ML (regime + forecast) ──────────────────────────────────
 export interface RegimeResponse {
   ticker: string;
   current_regime: string;
@@ -73,6 +84,16 @@ export interface ForecastResponse {
   n_training_samples: number;
 }
 
+export const mlApi = {
+  regime: (ticker: string) =>
+    apiFetch<RegimeResponse>(`/api/v1/ml/regime/${ticker}`, { method: "POST" }),
+  forecast: (ticker: string) =>
+    apiFetch<ForecastResponse>(`/api/v1/ml/forecast/${ticker}`, {
+      method: "POST",
+    }),
+};
+
+// ── Backtesting ──────────────────────────────────────────────
 export interface BacktestResponse {
   ticker: string;
   strategy: string;
@@ -94,6 +115,14 @@ export interface BacktestResponse {
   summary: string;
 }
 
+export const backtestApi = {
+  run: (ticker: string, strategy: string) =>
+    apiFetch<BacktestResponse>(`/api/v1/backtest/${ticker}/${strategy}`, {
+      method: "POST",
+    }),
+};
+
+// ── Risk ─────────────────────────────────────────────────────
 export interface VaRResponse {
   var: number;
   cvar: number;
@@ -104,6 +133,15 @@ export interface VaRResponse {
   interpretation: string;
 }
 
+export const riskApi = {
+  var: (ticker: string, portfolioValue: number, method = "historical") =>
+    apiFetch<VaRResponse>("/api/v1/risk/var", {
+      method: "POST",
+      body: JSON.stringify({ ticker, portfolio_value: portfolioValue, method }),
+    }),
+};
+
+// ── Agents ───────────────────────────────────────────────────
 export interface ResearchResponse {
   ticker: string;
   company_summary: string;
@@ -128,6 +166,14 @@ export interface ResearchResponse {
   errors: string[];
 }
 
+export const agentsApi = {
+  research: (ticker: string) =>
+    apiFetch<ResearchResponse>(`/api/v1/agents/research/${ticker}`, {
+      method: "POST",
+    }),
+};
+
+// ── Pricing (Black-Scholes) ──────────────────────────────────
 export interface BlackScholesResponse {
   price: number;
   greeks: {
@@ -142,47 +188,6 @@ export interface BlackScholesResponse {
   option_type: string;
   moneyness: string;
 }
-
-// ── API modules ───────────────────────────────────────────────
-export const healthApi = {
-  check: () => apiFetch<HealthResponse>("/health"),
-};
-
-export const signalsApi = {
-  get: (ticker: string) =>
-    apiFetch<SignalResponse>(`/api/v1/signals/${ticker}`),
-};
-
-export const mlApi = {
-  regime: (ticker: string) =>
-    apiFetch<RegimeResponse>(`/api/v1/ml/regime/${ticker}`, { method: "POST" }),
-  forecast: (ticker: string) =>
-    apiFetch<ForecastResponse>(`/api/v1/ml/forecast/${ticker}`, {
-      method: "POST",
-    }),
-};
-
-export const backtestApi = {
-  run: (ticker: string, strategy: string) =>
-    apiFetch<BacktestResponse>(`/api/v1/backtest/${ticker}/${strategy}`, {
-      method: "POST",
-    }),
-};
-
-export const riskApi = {
-  var: (ticker: string, portfolioValue: number, method = "historical") =>
-    apiFetch<VaRResponse>("/api/v1/risk/var", {
-      method: "POST",
-      body: JSON.stringify({ ticker, portfolio_value: portfolioValue, method }),
-    }),
-};
-
-export const agentsApi = {
-  research: (ticker: string) =>
-    apiFetch<ResearchResponse>(`/api/v1/agents/research/${ticker}`, {
-      method: "POST",
-    }),
-};
 
 export const pricingApi = {
   blackScholes: (params: {
@@ -199,8 +204,7 @@ export const pricingApi = {
     }),
 };
 
-// ── Add this to lib/api.ts ─────────────────────────────────────
-
+// ── Price History (candlestick charts) ───────────────────────
 export interface Candle {
   time: string;
   open: number;
@@ -222,4 +226,73 @@ export interface HistoryResponse {
 export const historyApi = {
   get: (ticker: string, range: "1mo" | "6mo" | "1y" | "5y" | "max" = "1y") =>
     apiFetch<HistoryResponse>(`/api/v1/history/${ticker}?range_=${range}`),
+};
+
+// ── Factor Model (Fama-French) ────────────────────────────────
+export interface FactorModelResponse {
+  ticker: string;
+  alpha: number;
+  alpha_pct: number;
+  alpha_tstat: number;
+  alpha_significant: boolean;
+  beta_market: number;
+  beta_smb: number;
+  beta_hml: number;
+  r_squared: number;
+  residual_vol: number;
+  interpretation: string;
+}
+
+export const factorModelApi = {
+  run: (ticker: string) =>
+    apiFetch<FactorModelResponse>(`/api/v1/factor-model/${ticker}`, {
+      method: "POST",
+    }),
+};
+
+// ── Execution Algorithms (TWAP/VWAP/IS) ───────────────────────
+export interface ExecutionSlice {
+  interval: number;
+  start_time: string;
+  end_time: string;
+  shares: number;
+  pct_of_order: number;
+}
+
+export interface ExecutionScheduleResponse {
+  ticker: string;
+  total_shares: number;
+  n_intervals: number;
+  algorithm: string;
+  slices: ExecutionSlice[];
+  expected_completion: string;
+  participation_rate: number;
+}
+
+export const executionApi = {
+  twap: (ticker: string, totalShares: number, nIntervals = 13) =>
+    apiFetch<ExecutionScheduleResponse>(`/api/v1/execution/${ticker}/twap`, {
+      method: "POST",
+      body: JSON.stringify({
+        total_shares: totalShares,
+        n_intervals: nIntervals,
+      }),
+    }),
+  vwap: (ticker: string, totalShares: number, nIntervals = 13) =>
+    apiFetch<ExecutionScheduleResponse>(`/api/v1/execution/${ticker}/vwap`, {
+      method: "POST",
+      body: JSON.stringify({
+        total_shares: totalShares,
+        n_intervals: nIntervals,
+      }),
+    }),
+  is: (ticker: string, totalShares: number, urgency: number, nIntervals = 13) =>
+    apiFetch<ExecutionScheduleResponse>(`/api/v1/execution/${ticker}/is`, {
+      method: "POST",
+      body: JSON.stringify({
+        total_shares: totalShares,
+        n_intervals: nIntervals,
+        urgency,
+      }),
+    }),
 };
