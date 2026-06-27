@@ -72,6 +72,9 @@ class Settings(BaseSettings):
     # ── CORS ──────────────────────────────────────────────────
     cors_origins: list[str] = Field(default=["http://localhost:3000"])
 
+    # ── Finnhub ───────────────────────────────────────────────
+    finnhub_api_key: str = Field(default="")
+
     # ── Computed properties ───────────────────────────────────
     @property
     def is_production(self) -> bool:
