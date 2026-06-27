@@ -10,8 +10,11 @@ const NAV = [
   { href: "/backtests", label: "Backtests", icon: "◫" },
   { href: "/theses", label: "Theses", icon: "◧" },
   { href: "/risk", label: "Risk", icon: "◬" },
+  { href: "/factors", label: "Factors", icon: "◇" },
   { href: "/about", label: "About", icon: "◉" },
 ];
+
+const VERSION = "v0.9.1";
 
 export function Sidebar() {
   const path = usePathname();
@@ -32,7 +35,6 @@ export function Sidebar() {
         flexShrink: 0,
       }}
     >
-      {/* Logo */}
       <div
         style={{
           padding: "24px 20px 20px",
@@ -64,7 +66,6 @@ export function Sidebar() {
         </div>
       </div>
 
-      {/* Nav */}
       <nav style={{ padding: "12px 8px", flex: 1 }}>
         {NAV.map(({ href, label, icon }) => {
           const active = path === href;
@@ -123,7 +124,6 @@ export function Sidebar() {
         })}
       </nav>
 
-      {/* Bottom */}
       <div
         style={{
           padding: "16px",
@@ -186,7 +186,7 @@ export function Sidebar() {
             letterSpacing: "0.04em",
           }}
         >
-          v0.7.0
+          {VERSION}
         </div>
       </div>
     </aside>
