@@ -11,10 +11,11 @@ const NAV = [
   { href: "/theses", label: "Theses", icon: "◧" },
   { href: "/risk", label: "Risk", icon: "◬" },
   { href: "/factors", label: "Factors", icon: "◇" },
+  { href: "/agents", label: "Agents", icon: "◓" },
   { href: "/about", label: "About", icon: "◉" },
 ];
 
-const VERSION = "v0.9.1";
+const VERSION = "v0.10.0";
 
 export function Sidebar() {
   const path = usePathname();
