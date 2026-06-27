@@ -2,21 +2,21 @@
 
 **Agentic Equity & Quantitative Intelligence Trading Analysis System**
 
-A full-stack quantitative research platform combining real financial algorithms, ML models, and an autonomous LLM agent pipeline to generate institutional-grade investment theses — automatically.
+A full-stack quantitative research platform combining real financial algorithms, ML models, real-time price streaming, and an autonomous LLM agent pipeline to generate institutional-grade investment theses — automatically.
 
 [![CI](https://github.com/CodeRockerr/AEQUITAS/actions/workflows/ci.yml/badge.svg)](https://github.com/CodeRockerr/AEQUITAS/actions)
 ![Python](https://img.shields.io/badge/Python-3.13-blue)
 ![Node](https://img.shields.io/badge/Node-20-green)
-![Tests](https://img.shields.io/badge/tests-121%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-141%20passing-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-lightgrey)
 
 ---
 
 ## What is this?
 
-AEQUITAS is a personal research platform built to be both a serious portfolio project and the foundation of a real quant/fintech SaaS product. It ingests live market data, runs a battery of quantitative finance algorithms and ML models, then hands the results to a multi-agent LLM pipeline that researches a company, evaluates the data, and writes a structured investment thesis — citing sources and critiquing its own conclusions before presenting them.
+AEQUITAS is a personal research platform built to be both a serious portfolio project and the foundation of a real quant/fintech SaaS product. It streams live market data, runs a battery of quantitative finance algorithms and ML models, then hands the results to a multi-agent LLM pipeline that researches a company, evaluates the data, and writes a structured investment thesis — citing sources and critiquing its own conclusions before presenting them.
 
-Everything in this repo is real, working, and tested. No mocked endpoints, no placeholder data once a ticker is ingested.
+Everything in this repo is real, working, and tested. No mocked endpoints, no placeholder data — search any ticker and the platform auto-ingests it.
 
 **Live demo:** [aequitas-three.vercel.app](https://aequitas-three.vercel.app)
 **API docs:** [aequitas-production-993d.up.railway.app/docs](https://aequitas-production-993d.up.railway.app/docs)
@@ -28,6 +28,7 @@ Everything in this repo is real, working, and tested. No mocked endpoints, no pl
 - [Architecture](#architecture)
 - [Tech Stack](#tech-stack)
 - [Algorithms & Models](#algorithms--models)
+- [Real-Time Price Streaming](#real-time-price-streaming)
 - [The Agentic Pipeline](#the-agentic-pipeline)
 - [Directory Structure](#directory-structure)
 - [Getting Started](#getting-started)
@@ -44,14 +45,14 @@ Everything in this repo is real, working, and tested. No mocked endpoints, no pl
 
 ```mermaid
 flowchart TB
-    subgraph Frontend["Frontend — Next.js 14, TypeScript, Recharts"]
+    subgraph Frontend["Frontend — Next.js 14, TypeScript, Recharts, lightweight-charts"]
         direction LR
-        F1["Overview"] --- F2["Dashboard"] --- F3["Backtests"] --- F4["Theses"] --- F5["Risk"] --- F6["About"]
+        F1["Overview"] --- F2["Dashboard"] --- F3["Backtests"] --- F4["Theses"] --- F5["Risk"] --- F6["Factors"] --- F7["About"]
     end
 
-    subgraph API["API Layer — FastAPI, Pydantic v2, SQLAlchemy async"]
+    subgraph API["API Layer — FastAPI, Pydantic v2, SQLAlchemy async, WebSocket"]
         direction LR
-        A1["health"] --- A2["market-data"] --- A3["pricing-risk"] --- A4["ml"] --- A5["signals"] --- A6["agents"]
+        A1["health"] --- A2["market-data"] --- A3["pricing-risk"] --- A4["ml"] --- A5["signals"] --- A6["agents"] --- A7["history"] --- A8["ws/prices"]
     end
 
     subgraph Algo["Algorithm Layer"]
@@ -62,6 +63,13 @@ flowchart TB
         AL4["Signals<br/>RSI/MACD/Bollinger · Pairs trading + Kalman filter"]
         AL5["Factor Model & Execution<br/>Fama-French · TWAP/VWAP/IS"]
         AL6["Backtester<br/>Vectorised, full tearsheet"]
+    end
+
+    subgraph Stream["Real-Time Layer"]
+        direction TB
+        ST1["Subscriber-tracked WebSocket<br/>broadcast manager"]
+        ST2["Background refresh loop<br/>per actively-watched ticker"]
+        ST3["Auto-ingest on first request<br/>+ market-closed fallback to last close"]
     end
 
     subgraph Agent["Agent Layer"]
@@ -83,11 +91,13 @@ flowchart TB
         S2[("Redis")]
     end
 
-    Frontend -->|"REST — typed client in lib/api.ts"| API
+    Frontend -->|"REST + WebSocket"| API
     API --> Algo
+    API --> Stream
     API --> Agent
     API --> Data
     Algo --> Storage
+    Stream --> Storage
     Agent --> Storage
     Data --> Storage
 ```
@@ -103,13 +113,14 @@ flowchart TB
 
 The database runs as a custom Docker-image service rather than Railway's one-click Postgres, since managed Postgres offerings (Railway, vanilla RDS) don't ship with the TimescaleDB extension. Running the official `timescaledb-ha` image keeps local Docker Compose and production identical.
 
-
 ---
+
+## Tech Stack
 
 | Layer | Technology |
 |---|---|
-| **Frontend** | Next.js 14 (App Router), TypeScript, Tailwind CSS, Recharts |
-| **Backend** | FastAPI, Python 3.13, Pydantic v2, SQLAlchemy 2.0 (async) |
+| **Frontend** | Next.js 14 (App Router), TypeScript, Tailwind CSS, Recharts, lightweight-charts (TradingView) |
+| **Backend** | FastAPI, Python 3.13, Pydantic v2, SQLAlchemy 2.0 (async), native WebSocket support |
 | **Database** | PostgreSQL + TimescaleDB (hypertables), pgvector (RAG) |
 | **Cache/Queue** | Redis |
 | **Agent Orchestration** | LangGraph 0.2 |
@@ -119,8 +130,8 @@ The database runs as a custom Docker-image service rather than Railway's one-cli
 | **CI/CD** | GitHub Actions (backend + frontend jobs, branch protection) |
 | **Linting** | Ruff (backend), ESLint (frontend) |
 | **Type Checking** | Mypy (backend), TypeScript strict (frontend) |
-| **Testing** | Pytest + pytest-asyncio (97 tests) |
-| **Deployment** | Vercel (frontend) + Railway (backend, TimescaleDB via Docker image, Redis) — **live** |
+| **Testing** | Pytest + pytest-asyncio (141 tests) |
+| **Deployment** | Vercel (frontend) + Railway (backend, real TimescaleDB via Docker image, Redis) — **live** |
 
 ---
 
@@ -141,16 +152,42 @@ The database runs as a custom Docker-image service rather than Railway's one-cli
 ### Signals
 - **Momentum signals**: RSI, MACD, Bollinger Bands — each normalised to `[-1, +1]` and combinable into a single weighted score
 - **Pairs trading**: Engle-Granger cointegration test + **Kalman filter** for dynamic hedge ratio estimation (more realistic than static OLS)
-- **Fama-French 3-factor model**: decomposes returns into Market, SMB (size), and HML (value) factor exposures. Reports alpha with a t-statistic, so you can tell skill from beta exposure.
+- **Fama-French 3-factor model**: decomposes returns into Market, SMB (size), and HML (value) factor exposures. Reports alpha with a t-statistic, so you can tell skill from beta exposure. UI on the **Factors** page.
 
 ### Execution Algorithms
 - **TWAP** (Time-Weighted Average Price) — splits an order equally across time intervals
 - **VWAP** (Volume-Weighted Average Price) — distributes shares proportional to a U-shaped intraday volume profile, matching real market microstructure
-- **Implementation Shortfall** — urgency-parameterised schedule that trades off market impact against timing risk; includes post-trade execution quality analysis (IS in basis points vs decision price)
+- **Implementation Shortfall** — urgency-parameterised schedule that trades off market impact against timing risk; includes post-trade execution quality analysis (IS in basis points vs decision price). All three visualised as a share-distribution bar chart on the **Factors** page.
 
 ### Backtesting
 - Vectorised backtesting engine (no Python loops over time — pure numpy/pandas operations)
 - Full tearsheet: Sharpe, Sortino, Calmar ratios, max drawdown, win rate, alpha vs buy-and-hold benchmark
+
+---
+
+## Real-Time Price Streaming
+
+Every ticker on the platform updates live via WebSocket — no manual ingestion required.
+
+```
+Person searches any ticker
+        ↓
+Backend auto-ingests if never seen, or if data is stale (>20h old)
+        ↓
+WebSocket subscription registers interest in that ticker
+        ↓
+Background refresh loop fetches a fresh price every ~12s,
+  but ONLY for tickers with at least one active subscriber
+        ↓
+Price pushed to every connected browser watching that ticker
+        ↓
+If markets are closed (weekends, holidays), falls back to the
+  last known daily close from TimescaleDB, flagged is_live=false
+```
+
+This subscriber-based throttling is what keeps the platform within yFinance's unofficial rate limits even as usage grows — a ticker nobody is watching is never polled. The frontend's `usePriceStream()` hook queues subscriptions made before the socket finishes connecting and flushes them on open, eliminating a race condition where early subscribe calls could be silently dropped.
+
+The **Dashboard** page also supports searching any ticker for a full price history — candlestick chart with volume, auto-ingesting the complete history (`period=max`, back to IPO/listing day) the first time a ticker is requested, with 1M/6M/1Y/5Y/All range controls.
 
 ---
 
@@ -186,7 +223,6 @@ flowchart TD
 
 This isn't a single prompt to an LLM — it's a stateful graph where each node does real computational work, and the critic node has caught genuine issues in testing (e.g. flagging a bullish verdict that contradicted bearish quant signals).
 
-
 ---
 
 ## Directory Structure
@@ -207,36 +243,45 @@ AEQUITAS/
 │   │   │   ├── signals/             # momentum, pairs trading, Fama-French factor model
 │   │   │   ├── execution/           # TWAP, VWAP, Implementation Shortfall
 │   │   │   └── backtesting/         # vectorised backtest engine
+│   │   ├── services/
+│   │   │   └── price_stream.py      # WebSocket subscriber manager, refresh loop, fallback
 │   │   ├── api/v1/                  # FastAPI routers
 │   │   │   ├── health.py
 │   │   │   ├── market_data.py
+│   │   │   ├── market_data_autofetch.py  # auto-ingest on first request
 │   │   │   ├── pricing.py
 │   │   │   ├── ml.py
 │   │   │   ├── signals.py
 │   │   │   ├── agents.py
-│   │   │   └── advanced.py          # factor model + execution endpoints
+│   │   │   ├── advanced.py          # factor model + execution endpoints
+│   │   │   ├── history.py           # full price history with auto-ingest
+│   │   │   └── websocket.py         # /ws/prices endpoint
 │   │   ├── data/
 │   │   │   └── vector/store.py      # pgvector document store for RAG
 │   │   ├── models/                  # SQLAlchemy ORM models
-│   │   ├── tasks/                   # background/Celery tasks
 │   │   ├── config.py                # pydantic-settings configuration
 │   │   ├── db.py                    # async engine + session factory
 │   │   └── main.py                  # FastAPI app factory
 │   ├── alembic/versions/            # database migrations
-│   ├── tests/unit/                  # 121 pytest tests
+│   ├── tests/unit/                  # 141 pytest tests
 │   └── pyproject.toml
 ├── frontend/
 │   ├── app/
-│   │   ├── page.tsx                 # Overview / landing
-│   │   ├── dashboard/page.tsx       # live signals, regime, SHAP
+│   │   ├── page.tsx                 # Overview / landing — real-time ticker tape
+│   │   ├── dashboard/page.tsx       # live signals, regime, SHAP, candlestick chart, ticker search
 │   │   ├── backtests/page.tsx       # strategy runner + equity curve
 │   │   ├── theses/page.tsx          # agent thesis generator
 │   │   ├── risk/page.tsx            # VaR/CVaR + options pricer
+│   │   ├── factors/page.tsx         # Fama-French + TWAP/VWAP/Implementation Shortfall
 │   │   ├── about/page.tsx           # marketing/about page
 │   │   └── globals.css              # design system (CSS custom properties)
 │   ├── components/
 │   │   ├── layout/                  # Sidebar, ThemeProvider
+│   │   ├── charts/
+│   │   │   └── CandlestickChart.tsx # lightweight-charts OHLC + volume
 │   │   └── ui/                      # PageHeader, StatCard, Badge, Spinner
+│   ├── hooks/
+│   │   └── usePriceStream.ts        # WebSocket client with subscription queueing
 │   ├── lib/api.ts                   # typed API client
 │   └── package.json
 ├── infra/
@@ -291,12 +336,15 @@ npm run dev
 
 App available at `http://localhost:3000`
 
-### 5. Ingest some data and try the agent
+### 5. Try it out
 
 ```bash
-curl -X POST "http://localhost:8000/api/v1/market-data/AAPL/ingest?period=1y&interval=1d"
+# Search any ticker on the Dashboard — auto-ingests automatically
+# Or trigger the agent directly:
 curl -X POST "http://localhost:8000/api/v1/agents/research/AAPL"
 ```
+
+No manual `/ingest` call needed anymore — searching a ticker on the Dashboard, or subscribing to it via WebSocket, triggers auto-ingestion transparently.
 
 ---
 
@@ -304,7 +352,7 @@ curl -X POST "http://localhost:8000/api/v1/agents/research/AAPL"
 
 ```bash
 # Database
-DATABASE_URL=postgresql://aequitas:aequitas@localhost:5433/aequitas
+DATABASE_URL=postgresql+asyncpg://aequitas:aequitas@localhost:5433/aequitas
 
 # Redis
 REDIS_URL=redis://localhost:6379
@@ -323,6 +371,8 @@ APP_DEBUG=true
 
 > **Note on `.env` location**: place this file in the repo root. Both `backend/app/config.py` (via `env_file=["../.env", ".env"]`) and Docker Compose read from here.
 
+Frontend needs `NEXT_PUBLIC_API_URL` set to your backend URL (`http://localhost:8000` locally, the Railway URL in production).
+
 ---
 
 ## API Reference
@@ -330,8 +380,12 @@ APP_DEBUG=true
 | Method | Endpoint | Description |
 |---|---|---|
 | `GET`  | `/health` | Liveness check |
-| `POST` | `/api/v1/market-data/{ticker}/ingest` | Ingest OHLCV data from yFinance |
+| `WS`   | `/ws/prices` | Real-time price streaming — subscribe/unsubscribe to any ticker |
+| `GET`  | `/api/v1/ws/status` | Debug: which tickers currently have active refresh loops |
+| `POST` | `/api/v1/market-data/{ticker}/ingest` | Manually ingest OHLCV data from yFinance |
 | `GET`  | `/api/v1/market-data/{ticker}/bars` | Retrieve stored price bars |
+| `GET`  | `/api/v1/market-data/{ticker}/info` | Company info (name, sector, description, market cap) |
+| `GET`  | `/api/v1/history/{ticker}?range=1mo\|6mo\|1y\|5y\|max` | Full price history, auto-ingests if needed |
 | `POST` | `/api/v1/pricing/black-scholes` | Price an option + Greeks |
 | `POST` | `/api/v1/risk/var` | Compute VaR/CVaR |
 | `POST` | `/api/v1/ml/regime/{ticker}` | HMM regime detection |
@@ -340,12 +394,12 @@ APP_DEBUG=true
 | `POST` | `/api/v1/signals/pairs/test` | Cointegration test for a pair |
 | `POST` | `/api/v1/signals/pairs/signal` | Pairs trading signal (Kalman) |
 | `POST` | `/api/v1/backtest/{ticker}/{strategy}` | Run a backtest (`rsi`/`macd`/`bollinger`) |
+| `POST` | `/api/v1/factor-model/{ticker}` | Fama-French 3-factor decomposition |
+| `POST` | `/api/v1/execution/{ticker}/twap` | TWAP execution schedule |
+| `POST` | `/api/v1/execution/{ticker}/vwap` | VWAP execution schedule |
+| `POST` | `/api/v1/execution/{ticker}/is` | Implementation Shortfall schedule |
 | `POST` | `/api/v1/agents/ingest-filing/{ticker}` | Store a document for RAG |
 | `POST` | `/api/v1/agents/research/{ticker}` | Run the full 4-node research agent |
-| `POST` | `/api/v1/factor-model/{ticker}` | Fama-French 3-factor decomposition (alpha, beta, SMB, HML) |
-| `POST` | `/api/v1/execution/{ticker}/twap` | TWAP execution schedule |
-| `POST` | `/api/v1/execution/{ticker}/vwap` | VWAP execution schedule (U-shaped volume profile) |
-| `POST` | `/api/v1/execution/{ticker}/is` | Implementation Shortfall schedule (urgency-parameterised) |
 
 Full interactive documentation: `http://localhost:8000/docs`
 
@@ -360,7 +414,9 @@ mypy app
 pytest tests/unit/ -v
 ```
 
-**121 tests passing** across pricing, risk, portfolio optimisation, ML models, signals, pairs trading, Fama-French factor model, TWAP/VWAP/Implementation Shortfall execution algorithms, backtesting, and agent components.
+**141 tests passing** across pricing, risk, portfolio optimisation, ML models, signals, pairs trading, Fama-French factor model, TWAP/VWAP/Implementation Shortfall execution algorithms, backtesting, real-time price streaming (subscriber tracking, market-closed fallback), and agent components.
+
+Coverage threshold: 65% — the real-time/history endpoints' I/O-heavy paths (live yfinance calls, WebSocket transport) are validated through manual integration testing rather than mocked unit tests, since mocking a full async DB session plus a live WebSocket connection for every code path adds maintenance burden without catching real bugs.
 
 ---
 
@@ -388,7 +444,8 @@ AEQUITAS started as an 8-week portfolio project but is being extended into a ful
 - [x] **Week 6** — Agentic layer: LangGraph 4-node graph, pgvector RAG, Groq LLM, critic revision loop
 - [x] **Week 7** — Frontend: full dashboard with dark/light theme, 6 pages, About/landing page
 - [x] **Week 8** — Advanced algorithms: Fama-French 3-factor model, TWAP/VWAP/Implementation Shortfall execution algorithms
-- [x] **Week 9** — Production deployment: Vercel (frontend) + Railway (FastAPI backend, real TimescaleDB via Docker image, Redis), CORS wired end-to-end, fixed a production-only feature engineering bug (52-week rolling window required exactly 252+ rows; now degrades gracefully)
+- [x] **Week 9** — Production deployment: Vercel + Railway (real TimescaleDB via Docker image, Redis), fixed a production-only feature engineering bug
+- [x] **Week 10** — Real-time layer: WebSocket price streaming with subscriber-based throttling, auto-ingest on first request, market-closed fallback, full price history with candlestick charts, Factors page surfacing Fama-French and execution algorithms in the UI
 
 ### In Progress / Next
 - [ ] **Advanced agents** — Earnings call analysis agent, news sentiment agent, portfolio construction agent
@@ -415,7 +472,7 @@ MS Computer Science, NC State University
 - Portfolio: [@Portfolio](https://adit-2d-portfolio.vercel.app/)
 - Resume: [@Resume](https://drive.google.com/file/d/16_bFetVUPBOT01t3aSIqqDIR703DT7Lc/view?usp=sharing)
 
-Built as a deep-dive into production quantitative systems, agentic AI architecture, and full-stack engineering — with the explicit goal of being both a credible job-application portfolio piece and the seed of a real fintech product.
+Built as a deep-dive into production quantitative systems, agentic AI architecture, real-time systems design, and full-stack engineering — with the explicit goal of being both a credible job-application portfolio piece and the seed of a real fintech product.
 
 ---
 
