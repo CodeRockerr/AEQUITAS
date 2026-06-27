@@ -12,6 +12,7 @@ from fastapi.responses import JSONResponse
 from app.api.v1 import (
     advanced,
     agents,
+    extended_agents,
     health,
     history,
     market_data,
@@ -36,7 +37,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="AEQUITAS",
         description="Agentic Equity & Quantitative Intelligence Trading Analysis System",
-        version="0.9.1",
+        version="0.10.0",
         docs_url="/docs" if settings.is_development else None,
         redoc_url="/redoc" if settings.is_development else None,
         lifespan=lifespan,
@@ -84,6 +85,7 @@ def create_app() -> FastAPI:
     app.include_router(advanced.router, tags=["advanced"])
     app.include_router(websocket.router, tags=["websocket"])
     app.include_router(history.router, tags=["history"])
+    app.include_router(extended_agents.router, tags=["extended-agents"])
 
     return app
 
