@@ -61,6 +61,7 @@ class EarningsAnalysisOut(BaseModel):
     analysis: str
     key_metrics: dict
     earnings_history: list[EarningsHistoryOut]
+    history_available: bool
     errors: list[str]
 
 
@@ -134,6 +135,10 @@ async def earnings_analysis(ticker: str) -> EarningsAnalysisOut:
     Synthesizes earnings history, recent earnings-related news,
     and key fundamentals into a structured analysis with guidance
     sentiment classification.
+
+    history_available=false means Finnhub's free-tier earnings
+    calendar had no data for this ticker — the analysis still runs,
+    grounded in news + fundamentals instead.
     """
     try:
         result = await run_earnings_agent(ticker, _llm)
@@ -153,6 +158,7 @@ async def earnings_analysis(ticker: str) -> EarningsAnalysisOut:
         earnings_history=[
             EarningsHistoryOut(**h.__dict__) for h in result.earnings_history
         ],
+        history_available=result.history_available,
         errors=result.errors,
     )
 

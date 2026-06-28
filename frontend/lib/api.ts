@@ -296,3 +296,101 @@ export const executionApi = {
       }),
     }),
 };
+
+// ── Add this to lib/api.ts ─────────────────────────────────────
+
+export interface NewsArticle {
+  headline: string;
+  source: string;
+  url: string;
+  published: string;
+}
+
+export interface NewsSentimentResponse {
+  ticker: string;
+  sentiment: string;
+  sentiment_score: number;
+  trend: string;
+  confidence: number;
+  summary: string;
+  key_themes: string[];
+  recent_articles: NewsArticle[];
+  finnhub_sentiment_available: boolean;
+  errors: string[];
+}
+
+export interface EarningsHistoryEntry {
+  date: string;
+  quarter: string;
+  eps_actual: number | null;
+  eps_estimate: number | null;
+  eps_surprise_pct: number | null;
+  revenue_actual: number | null;
+  revenue_estimate: number | null;
+}
+
+export interface EarningsAnalysisResponse {
+  ticker: string;
+  next_earnings_date: string | null;
+  last_earnings_beat: boolean | null;
+  last_eps_surprise_pct: number | null;
+  guidance_sentiment: string;
+  analysis: string;
+  key_metrics: Record<string, number | null>;
+  earnings_history: EarningsHistoryEntry[];
+  errors: string[];
+}
+
+export interface PortfolioAllocationOut {
+  ticker: string;
+  max_sharpe_weight: number;
+  min_variance_weight: number;
+}
+
+export interface PairCointegrationOut {
+  ticker_a: string;
+  ticker_b: string;
+  is_cointegrated: boolean;
+  p_value: number;
+  half_life: number;
+}
+
+export interface PortfolioConstructionResponse {
+  tickers: string[];
+  allocations: PortfolioAllocationOut[];
+  max_sharpe_return: number;
+  max_sharpe_vol: number;
+  max_sharpe_ratio: number;
+  min_variance_vol: number;
+  cointegrated_pairs: PairCointegrationOut[];
+  thesis: string;
+  errors: string[];
+}
+
+export const extendedAgentsApi = {
+  newsSentiment: (ticker: string) =>
+    apiFetch<NewsSentimentResponse>(`/api/v1/agents/news-sentiment/${ticker}`, {
+      method: "POST",
+    }),
+  earnings: (ticker: string) =>
+    apiFetch<EarningsAnalysisResponse>(`/api/v1/agents/earnings/${ticker}`, {
+      method: "POST",
+    }),
+  portfolio: (tickers: string[]) =>
+    apiFetch<PortfolioConstructionResponse>("/api/v1/agents/portfolio", {
+      method: "POST",
+      body: JSON.stringify({ tickers }),
+    }),
+};
+export interface EarningsAnalysisResponse {
+  ticker: string;
+  next_earnings_date: string | null;
+  last_earnings_beat: boolean | null;
+  last_eps_surprise_pct: number | null;
+  guidance_sentiment: string;
+  analysis: string;
+  key_metrics: Record<string, number | null>;
+  earnings_history: EarningsHistoryEntry[];
+  history_available: boolean; // ← add this line
+  errors: string[];
+}

@@ -8,6 +8,11 @@ beat/miss history), (2) recent earnings-related news coverage, and
 (3) basic company fundamentals — giving a genuinely useful "earnings
 analysis" without needing a transcript API subscription.
 
+Note: Finnhub's free tier sometimes returns an empty earnings calendar
+for certain tickers/date ranges even without erroring — this is a
+known data-availability limitation, not a bug. We detect this case
+explicitly and surface a clear message rather than a silent null.
+
 Standalone agent, same composable pattern as the news sentiment agent.
 """
 
@@ -45,6 +50,7 @@ class EarningsAnalysisResult:
     analysis: str  # LLM-written narrative
     key_metrics: dict
     earnings_history: list[EarningsHistoryEntry] = field(default_factory=list)
+    history_available: bool = True  # False if Finnhub returned no calendar data at all
     errors: list[str] = field(default_factory=list)
 
 
@@ -69,8 +75,13 @@ async def run_earnings_agent(ticker: str, llm_call) -> EarningsAnalysisResult:
     financials = await get_basic_financials(ticker)
     news = await get_company_news(ticker, days_back=21)
 
+    history_available = len(calendar) > 0
     if not calendar:
-        errors.append(f"No earnings calendar data found for {ticker}.")
+        errors.append(
+            f"Finnhub returned no earnings calendar data for {ticker} on the "
+            f"current API plan — historical EPS beat/miss data is unavailable. "
+            f"Falling back to news + fundamentals only."
+        )
 
     # Sort by date, separate past (with actuals) from future
     past_entries = [e for e in calendar if e.get("epsActual") is not None]
@@ -90,6 +101,12 @@ async def run_earnings_agent(ticker: str, llm_call) -> EarningsAnalysisResult:
         )
         if last_surprise_pct is not None:
             last_beat = last_surprise_pct > 0
+    elif calendar:
+        # Calendar has data but none with actuals reported yet
+        errors.append(
+            f"{ticker} has upcoming earnings dates on file, but no past "
+            f"quarter with reported actuals — beat/miss history unavailable."
+        )
 
     history = [
         EarningsHistoryEntry(
@@ -130,7 +147,7 @@ async def run_earnings_agent(ticker: str, llm_call) -> EarningsAnalysisResult:
             for h in history
         )
         if history
-        else "No historical earnings data available."
+        else "No historical earnings data available on current Finnhub plan."
     )
 
     key_metrics: dict = {}
@@ -160,7 +177,8 @@ async def run_earnings_agent(ticker: str, llm_call) -> EarningsAnalysisResult:
             "Given a company's earnings history, recent earnings-related news, and "
             "key fundamentals, write a concise earnings analysis covering: "
             "recent performance trend, guidance sentiment, and what to watch for "
-            "next quarter. "
+            "next quarter. If historical earnings data is unavailable, rely more "
+            "heavily on news coverage and fundamentals, and note the limitation. "
             "End your response with exactly one line: "
             "GUIDANCE: positive|negative|mixed|unknown"
         ),
@@ -192,5 +210,6 @@ async def run_earnings_agent(ticker: str, llm_call) -> EarningsAnalysisResult:
         analysis=analysis,
         key_metrics=key_metrics,
         earnings_history=history,
+        history_available=history_available,
         errors=errors,
     )
