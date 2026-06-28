@@ -528,36 +528,28 @@ export default function AgentsPage() {
                 >
                   <StatCard
                     label="Next Earnings"
-                    value={earningsResult.next_earnings_date ?? "—"}
+                    value={earningsResult.next_earnings_date ?? "Not scheduled"}
                     delay={0}
                   />
-                  <StatCard
-                    label="Last Beat"
-                    value={
-                      earningsResult.last_earnings_beat === null
-                        ? "—"
-                        : earningsResult.last_earnings_beat
-                          ? "Beat"
-                          : "Missed"
-                    }
-                    accent={
-                      earningsResult.last_earnings_beat
-                        ? "green"
-                        : earningsResult.last_earnings_beat === false
-                          ? "red"
-                          : "neutral"
-                    }
-                    delay={60}
-                  />
-                  <StatCard
-                    label="EPS Surprise"
-                    value={
-                      earningsResult.last_eps_surprise_pct !== null
-                        ? `${earningsResult.last_eps_surprise_pct >= 0 ? "+" : ""}${earningsResult.last_eps_surprise_pct}%`
-                        : "—"
-                    }
-                    delay={120}
-                  />
+                  {earningsResult.last_earnings_beat !== null && (
+                    <StatCard
+                      label="Last Beat"
+                      value={
+                        earningsResult.last_earnings_beat ? "Beat" : "Missed"
+                      }
+                      accent={
+                        earningsResult.last_earnings_beat ? "green" : "red"
+                      }
+                      delay={60}
+                    />
+                  )}
+                  {earningsResult.last_eps_surprise_pct !== null && (
+                    <StatCard
+                      label="EPS Surprise"
+                      value={`${earningsResult.last_eps_surprise_pct >= 0 ? "+" : ""}${earningsResult.last_eps_surprise_pct}%`}
+                      delay={120}
+                    />
+                  )}
                   <StatCard
                     label="Guidance"
                     value={earningsResult.guidance_sentiment.toUpperCase()}
@@ -565,6 +557,26 @@ export default function AgentsPage() {
                     delay={180}
                   />
                 </div>
+
+                {!earningsResult.history_available && (
+                  <div
+                    style={{
+                      background: "var(--accent-amber-bg)",
+                      border:
+                        "1px solid color-mix(in srgb, var(--accent-amber) 30%, transparent)",
+                      borderRadius: "var(--radius-md)",
+                      padding: "10px 16px",
+                      fontFamily: "var(--font-mono)",
+                      fontSize: "11px",
+                      color: "var(--accent-amber)",
+                      marginBottom: "20px",
+                    }}
+                  >
+                    No historical EPS beat/miss data available from Finnhub for
+                    this ticker — analysis below is grounded in recent news and
+                    fundamentals instead.
+                  </div>
+                )}
 
                 <div
                   style={{

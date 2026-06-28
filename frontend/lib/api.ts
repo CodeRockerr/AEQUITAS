@@ -382,3 +382,15 @@ export const extendedAgentsApi = {
       body: JSON.stringify({ tickers }),
     }),
 };
+export interface EarningsAnalysisResponse {
+  ticker: string;
+  next_earnings_date: string | null;
+  last_earnings_beat: boolean | null;
+  last_eps_surprise_pct: number | null;
+  guidance_sentiment: string;
+  analysis: string;
+  key_metrics: Record<string, number | null>;
+  earnings_history: EarningsHistoryEntry[];
+  history_available: boolean; // ← add this line
+  errors: string[];
+}
