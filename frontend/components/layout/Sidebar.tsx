@@ -4,18 +4,94 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "./ThemeProvider";
 
-const NAV = [
+// Grouped nav reduces top-level cognitive load — research backing:
+// reducing stimuli and clarifying intent improves trust and usability
+// in data-dense interfaces. 8 flat items → 2 ungrouped + 2 groups.
+const NAV_TOP = [
   { href: "/", label: "Overview", icon: "○" },
   { href: "/dashboard", label: "Dashboard", icon: "◈" },
-  { href: "/backtests", label: "Backtests", icon: "◫" },
-  { href: "/theses", label: "Theses", icon: "◧" },
-  { href: "/risk", label: "Risk", icon: "◬" },
-  { href: "/factors", label: "Factors", icon: "◇" },
-  { href: "/agents", label: "Agents", icon: "◓" },
-  { href: "/about", label: "About", icon: "◉" },
 ];
 
-const VERSION = "v0.10.0";
+const NAV_GROUPS = [
+  {
+    label: "Research",
+    items: [
+      { href: "/theses", label: "Theses", icon: "◧" },
+      { href: "/agents", label: "Agents", icon: "◓" },
+    ],
+  },
+  {
+    label: "Quant Tools",
+    items: [
+      { href: "/backtests", label: "Backtests", icon: "◫" },
+      { href: "/risk", label: "Risk", icon: "◬" },
+      { href: "/factors", label: "Factors", icon: "◇" },
+    ],
+  },
+];
+
+const NAV_BOTTOM = [{ href: "/about", label: "About", icon: "◉" }];
+
+const VERSION = "v0.10.1";
+
+function NavLink({
+  href,
+  label,
+  icon,
+  active,
+}: {
+  href: string;
+  label: string;
+  icon: string;
+  active: boolean;
+}) {
+  return (
+    <Link
+      href={href}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "10px",
+        padding: "7px 12px",
+        borderRadius: "var(--radius-md)",
+        marginBottom: "2px",
+        textDecoration: "none",
+        background: active ? "var(--bg-elevated)" : "transparent",
+        transition: "all var(--duration-fast)",
+      }}
+      onMouseEnter={(e) => {
+        if (!active)
+          (e.currentTarget as HTMLElement).style.background =
+            "var(--bg-elevated)";
+      }}
+      onMouseLeave={(e) => {
+        if (!active)
+          (e.currentTarget as HTMLElement).style.background = "transparent";
+      }}
+    >
+      <span
+        style={{
+          fontFamily: "var(--font-mono)",
+          fontSize: "14px",
+          color: active ? "var(--text-primary)" : "var(--text-tertiary)",
+          lineHeight: 1,
+        }}
+      >
+        {icon}
+      </span>
+      <span
+        style={{
+          fontFamily: "var(--font-sans)",
+          fontSize: "13px",
+          fontWeight: active ? "500" : "400",
+          color: active ? "var(--text-primary)" : "var(--text-secondary)",
+        }}
+      >
+        {label}
+      </span>
+    </Link>
+  );
+}
 
 export function Sidebar() {
   const path = usePathname();
@@ -24,7 +100,7 @@ export function Sidebar() {
   return (
     <aside
       style={{
-        width: "200px",
+        width: "208px",
         minHeight: "100vh",
         background: "var(--bg-surface)",
         borderRight: "1px solid var(--border-subtle)",
@@ -67,62 +143,43 @@ export function Sidebar() {
         </div>
       </div>
 
-      <nav style={{ padding: "12px 8px", flex: 1 }}>
-        {NAV.map(({ href, label, icon }) => {
-          const active = path === href;
-          return (
-            <Link
-              key={href}
-              href={href}
+      <nav style={{ padding: "12px 8px", flex: 1, overflowY: "auto" }}>
+        {NAV_TOP.map((item) => (
+          <NavLink key={item.href} {...item} active={path === item.href} />
+        ))}
+
+        {NAV_GROUPS.map((group) => (
+          <div key={group.label} style={{ marginTop: "16px" }}>
+            <div
               style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "10px",
-                padding: "8px 12px",
-                borderRadius: "var(--radius-md)",
-                marginBottom: "2px",
-                textDecoration: "none",
-                background: active ? "var(--bg-elevated)" : "transparent",
-                transition: "all var(--duration-fast)",
-              }}
-              onMouseEnter={(e) => {
-                if (!active)
-                  (e.currentTarget as HTMLElement).style.background =
-                    "var(--bg-elevated)";
-              }}
-              onMouseLeave={(e) => {
-                if (!active)
-                  (e.currentTarget as HTMLElement).style.background =
-                    "transparent";
+                fontFamily: "var(--font-mono)",
+                fontSize: "9px",
+                letterSpacing: "0.08em",
+                color: "var(--text-tertiary)",
+                textTransform: "uppercase",
+                padding: "0 12px",
+                marginBottom: "6px",
               }}
             >
-              <span
-                style={{
-                  fontFamily: "var(--font-mono)",
-                  fontSize: "14px",
-                  color: active
-                    ? "var(--text-primary)"
-                    : "var(--text-tertiary)",
-                  lineHeight: 1,
-                }}
-              >
-                {icon}
-              </span>
-              <span
-                style={{
-                  fontFamily: "var(--font-sans)",
-                  fontSize: "13px",
-                  fontWeight: active ? "500" : "400",
-                  color: active
-                    ? "var(--text-primary)"
-                    : "var(--text-secondary)",
-                }}
-              >
-                {label}
-              </span>
-            </Link>
-          );
-        })}
+              {group.label}
+            </div>
+            {group.items.map((item) => (
+              <NavLink key={item.href} {...item} active={path === item.href} />
+            ))}
+          </div>
+        ))}
+
+        <div
+          style={{
+            marginTop: "16px",
+            paddingTop: "12px",
+            borderTop: "1px solid var(--border-subtle)",
+          }}
+        >
+          {NAV_BOTTOM.map((item) => (
+            <NavLink key={item.href} {...item} active={path === item.href} />
+          ))}
+        </div>
       </nav>
 
       <div

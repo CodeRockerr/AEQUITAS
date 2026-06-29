@@ -5,6 +5,8 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCard } from "@/components/ui/StatCard";
 import { Badge } from "@/components/ui/Badge";
 import { Spinner } from "@/components/ui/Spinner";
+import { AgentProgress } from "@/components/ui/AgentProgress";
+import { InsightStrip } from "@/components/ui/InsightStrip";
 import { agentsApi, type ResearchResponse } from "@/lib/api";
 
 const TICKERS = ["AAPL", "MSFT", "SPY", "NVDA", "TSLA", "AMZN"];
@@ -36,6 +38,43 @@ export default function ThesesPage() {
     s: string,
   ): "green" | "red" | "amber" | "neutral" =>
     s === "bullish" ? "green" : s === "bearish" ? "red" : "amber";
+
+  // Derive a real, data-driven Observed/Why/Next summary rather than
+  // static text — this surfaces the same kind of contradiction the
+  // critic agent itself checks for, visually, before the prose wall.
+  function buildInsight(r: ResearchResponse) {
+    const noticed = `${
+      r.thesis_sentiment === "bullish"
+        ? "Bullish"
+        : r.thesis_sentiment === "bearish"
+          ? "Bearish"
+          : "Mixed"
+    } thesis on ${r.ticker} — regime is ${r.current_regime}, momentum score ${r.signal_score.toFixed(2)}`;
+
+    let whyItMatters: string;
+    const regimeBullish = r.current_regime === "Bull";
+    const regimeBearish = r.current_regime === "Bear";
+    if (r.signal_score > 0.2 && regimeBearish) {
+      whyItMatters =
+        "Bullish momentum contradicts a Bear regime — worth scrutiny before acting.";
+    } else if (r.signal_score < -0.2 && regimeBullish) {
+      whyItMatters =
+        "Bearish momentum contradicts a Bull regime — worth scrutiny before acting.";
+    } else if (r.revision_count > 1) {
+      whyItMatters =
+        "The critic requested a revision before approving this thesis.";
+    } else {
+      whyItMatters =
+        "Signals and regime are directionally aligned with the thesis.";
+    }
+
+    const nextAction =
+      r.confidence_score > 0.7
+        ? "High confidence — review the full Bull/Bear case below."
+        : "Moderate confidence — cross-check the Quant Evidence tab before acting.";
+
+    return { noticed, whyItMatters, nextAction };
+  }
 
   return (
     <div style={{ minHeight: "100vh" }}>
@@ -94,29 +133,15 @@ export default function ThesesPage() {
             >
               Running 4-node agent pipeline...
             </div>
-            {[
-              "Research node: fetching company data",
-              "Quant node: computing signals & regime",
-              "Thesis node: generating investment thesis",
-              "Critic node: evaluating thesis quality",
-            ].map((step, i) => (
-              <div
-                key={i}
-                className="animate-fade-up"
-                style={{
-                  fontFamily: "var(--font-mono)",
-                  fontSize: "11px",
-                  color: "var(--text-tertiary)",
-                  animationDelay: `${i * 800}ms`,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                }}
-              >
-                <span style={{ color: "var(--accent-green)" }}>▸</span>
-                {step}
-              </div>
-            ))}
+            <AgentProgress
+              steps={[
+                "Research node: fetching company data",
+                "Quant node: computing signals & regime",
+                "Thesis node: generating investment thesis",
+                "Critic node: evaluating thesis quality",
+              ]}
+              msPerStep={5000}
+            />
           </div>
         )}
 
@@ -193,6 +218,9 @@ export default function ThesesPage() {
                 delay={300}
               />
             </div>
+
+            {/* Insight strip — Observed / Why it matters / Next action */}
+            <InsightStrip {...buildInsight(result)} />
 
             {/* Tabs */}
             <div
