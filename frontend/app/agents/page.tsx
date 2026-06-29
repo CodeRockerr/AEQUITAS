@@ -5,6 +5,8 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCard } from "@/components/ui/StatCard";
 import { Badge } from "@/components/ui/Badge";
 import { Spinner } from "@/components/ui/Spinner";
+import { AgentProgress } from "@/components/ui/AgentProgress";
+import { InsightStrip } from "@/components/ui/InsightStrip";
 import {
   extendedAgentsApi,
   type NewsSentimentResponse,
@@ -23,7 +25,6 @@ export default function AgentsPage() {
   const [activeTab, setActiveTab] =
     useState<(typeof TABS)[number]["id"]>("news");
 
-  // ── News sentiment state ────────────────────────────────────
   const [newsTicker, setNewsTicker] = useState("AAPL");
   const [newsResult, setNewsResult] = useState<NewsSentimentResponse | null>(
     null,
@@ -31,14 +32,12 @@ export default function AgentsPage() {
   const [newsLoading, setNewsLoading] = useState(false);
   const [newsError, setNewsError] = useState<string | null>(null);
 
-  // ── Earnings state ──────────────────────────────────────────
   const [earningsTicker, setEarningsTicker] = useState("AAPL");
   const [earningsResult, setEarningsResult] =
     useState<EarningsAnalysisResponse | null>(null);
   const [earningsLoading, setEarningsLoading] = useState(false);
   const [earningsError, setEarningsError] = useState<string | null>(null);
 
-  // ── Portfolio state ─────────────────────────────────────────
   const [portfolioInput, setPortfolioInput] = useState("AAPL, MSFT, NVDA");
   const [portfolioResult, setPortfolioResult] =
     useState<PortfolioConstructionResponse | null>(null);
@@ -113,6 +112,46 @@ export default function AgentsPage() {
           ? "amber"
           : "neutral";
 
+  function buildNewsInsight(r: NewsSentimentResponse) {
+    const noticed = `${r.sentiment} sentiment on ${r.ticker}, trend ${r.trend}`;
+    let whyItMatters: string;
+    if (r.trend === "worsening" && r.sentiment !== "bearish") {
+      whyItMatters =
+        "Sentiment is still net-positive but worsening — an early signal worth watching.";
+    } else if (r.trend === "improving" && r.sentiment !== "bullish") {
+      whyItMatters =
+        "Sentiment is improving even though not yet bullish — momentum may be building.";
+    } else {
+      whyItMatters = `Sentiment and trend are aligned — ${r.confidence >= 0.7 ? "high" : "moderate"} confidence read.`;
+    }
+    const nextAction =
+      r.key_themes.length > 0
+        ? `Watch for follow-up coverage on: ${r.key_themes.slice(0, 2).join(", ")}.`
+        : "Check the Earnings Analysis tab for fundamental context.";
+    return { noticed, whyItMatters, nextAction };
+  }
+
+  function buildPortfolioInsight(r: PortfolioConstructionResponse) {
+    const topHolding = [...r.allocations].sort(
+      (a, b) => b.max_sharpe_weight - a.max_sharpe_weight,
+    )[0];
+    const noticed = `Max-Sharpe portfolio: ${(r.max_sharpe_return * 100).toFixed(1)}% expected return, Sharpe ${r.max_sharpe_ratio.toFixed(2)}`;
+    let whyItMatters: string;
+    if (topHolding && topHolding.max_sharpe_weight > 0.6) {
+      whyItMatters = `Concentrated in ${topHolding.ticker} (${(topHolding.max_sharpe_weight * 100).toFixed(0)}%) — limited diversification benefit.`;
+    } else if (r.cointegrated_pairs.length > 0) {
+      whyItMatters = `${r.cointegrated_pairs.length} cointegrated pair(s) found — a pairs-trade overlay may add uncorrelated return.`;
+    } else {
+      whyItMatters =
+        "Allocation is reasonably diversified across the requested tickers.";
+    }
+    const nextAction =
+      r.max_sharpe_vol > 0.25
+        ? "High volatility — consider the Min-Variance allocation if risk tolerance is lower."
+        : "Review the full thesis below before committing capital.";
+    return { noticed, whyItMatters, nextAction };
+  }
+
   return (
     <div style={{ minHeight: "100vh" }}>
       <PageHeader
@@ -122,7 +161,6 @@ export default function AgentsPage() {
       />
 
       <div style={{ padding: "32px 40px" }}>
-        {/* Tabs */}
         <div
           style={{
             display: "flex",
@@ -224,6 +262,28 @@ export default function AgentsPage() {
               </div>
             </div>
 
+            {newsLoading && (
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  padding: "60px 0",
+                  gap: "16px",
+                }}
+              >
+                <Spinner size={24} />
+                <AgentProgress
+                  steps={[
+                    "Fetching recent headlines from Finnhub",
+                    "Scoring sentiment with LLM",
+                    "Comparing against prior period trend",
+                  ]}
+                  msPerStep={2500}
+                />
+              </div>
+            )}
+
             {newsError && (
               <div
                 style={{
@@ -242,7 +302,7 @@ export default function AgentsPage() {
               </div>
             )}
 
-            {newsResult && (
+            {newsResult && !newsLoading && (
               <>
                 <div
                   style={{
@@ -282,6 +342,8 @@ export default function AgentsPage() {
                     delay={180}
                   />
                 </div>
+
+                <InsightStrip {...buildNewsInsight(newsResult)} />
 
                 <div
                   style={{
@@ -497,6 +559,28 @@ export default function AgentsPage() {
               </div>
             </div>
 
+            {earningsLoading && (
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  padding: "60px 0",
+                  gap: "16px",
+                }}
+              >
+                <Spinner size={24} />
+                <AgentProgress
+                  steps={[
+                    "Fetching earnings calendar from Finnhub",
+                    "Pulling key fundamentals",
+                    "Synthesising earnings analysis with LLM",
+                  ]}
+                  msPerStep={2500}
+                />
+              </div>
+            )}
+
             {earningsError && (
               <div
                 style={{
@@ -515,7 +599,7 @@ export default function AgentsPage() {
               </div>
             )}
 
-            {earningsResult && (
+            {earningsResult && !earningsLoading && (
               <>
                 <div
                   style={{
@@ -577,6 +661,18 @@ export default function AgentsPage() {
                     fundamentals instead.
                   </div>
                 )}
+
+                <InsightStrip
+                  noticed={`Next earnings: ${earningsResult.next_earnings_date ?? "not scheduled"} · guidance reads ${earningsResult.guidance_sentiment}`}
+                  whyItMatters={
+                    earningsResult.last_earnings_beat === false
+                      ? "Last quarter missed estimates — watch for a pattern before the next print."
+                      : earningsResult.last_earnings_beat === true
+                        ? "Last quarter beat estimates — a continuation would be a positive signal."
+                        : "No recent beat/miss history available — lean on fundamentals and news for context."
+                  }
+                  nextAction="Review the full analysis below, then cross-check against the News Sentiment tab."
+                />
 
                 <div
                   style={{
@@ -813,6 +909,29 @@ export default function AgentsPage() {
               </div>
             </div>
 
+            {portfolioLoading && (
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  padding: "60px 0",
+                  gap: "16px",
+                }}
+              >
+                <Spinner size={24} />
+                <AgentProgress
+                  steps={[
+                    "Fetching price history for all tickers",
+                    "Running mean-variance optimisation",
+                    "Testing pairs for cointegration",
+                    "Generating portfolio thesis with LLM",
+                  ]}
+                  msPerStep={3000}
+                />
+              </div>
+            )}
+
             {portfolioError && (
               <div
                 style={{
@@ -831,7 +950,7 @@ export default function AgentsPage() {
               </div>
             )}
 
-            {portfolioResult && (
+            {portfolioResult && !portfolioLoading && (
               <>
                 <div
                   style={{
@@ -870,6 +989,8 @@ export default function AgentsPage() {
                     delay={240}
                   />
                 </div>
+
+                <InsightStrip {...buildPortfolioInsight(portfolioResult)} />
 
                 <div
                   style={{

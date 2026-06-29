@@ -6,6 +6,19 @@ interface StatCardProps {
   delay?: number;
 }
 
+/**
+ * Directional glyph paired with each accent color — never rely on
+ * color alone to convey meaning (accessibility: color-blind users
+ * can't reliably distinguish red/green hue differences).
+ */
+const ACCENT_GLYPH: Record<string, string> = {
+  green: "▲",
+  red: "▼",
+  amber: "●",
+  blue: "■",
+  neutral: "",
+};
+
 export function StatCard({
   label,
   value,
@@ -21,6 +34,8 @@ export function StatCard({
     neutral: "var(--text-primary)",
   };
 
+  const glyph = ACCENT_GLYPH[accent];
+
   return (
     <div
       className="card animate-fade-up"
@@ -35,8 +50,16 @@ export function StatCard({
         style={{
           color: accentColors[accent],
           marginTop: "6px",
+          display: "flex",
+          alignItems: "baseline",
+          gap: "6px",
         }}
       >
+        {glyph && (
+          <span style={{ fontSize: "11px", opacity: 0.85 }} aria-hidden="true">
+            {glyph}
+          </span>
+        )}
         {value}
       </div>
       {sub && (
