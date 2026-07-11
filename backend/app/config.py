@@ -9,6 +9,7 @@ Import the `settings` singleton anywhere in the app:
 """
 
 from functools import lru_cache
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -24,7 +25,7 @@ class Settings(BaseSettings):
       3. Default values defined here (lowest priority)
 
     This means the same code works locally (reads .env) and in
-    production (reads real environment variables injected by Railway/Vercel).
+    production (reads real environment variables injected by the host).
     """
 
     model_config = SettingsConfigDict(
@@ -87,10 +88,33 @@ class Settings(BaseSettings):
     @property
     def async_database_url(self) -> str:
         """
-        SQLAlchemy needs asyncpg:// not postgresql:// for async connections.
-        This property auto-converts so you never have to remember.
+        SQLAlchemy needs postgresql+asyncpg:// (not postgresql://) for
+        async connections, and asyncpg does NOT understand libpq query
+        parameters like sslmode/channel_binding that managed Postgres
+        providers (e.g. Neon) include in their connection strings.
+
+        This property:
+          1. Swaps the scheme to postgresql+asyncpg://
+          2. Drops channel_binding (libpq-only, asyncpg rejects it)
+          3. Translates sslmode=require/verify-ca/verify-full into
+             ssl=require, which SQLAlchemy's asyncpg dialect accepts
+
+        Local URLs without query params pass through unchanged.
         """
-        return self.database_url.replace("postgresql://", "postgresql+asyncpg://")
+        url = self.database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        parts = urlsplit(url)
+        if not parts.query:
+            return url
+
+        query = dict(parse_qsl(parts.query))
+        query.pop("channel_binding", None)
+        sslmode = query.pop("sslmode", None)
+        if sslmode in {"require", "verify-ca", "verify-full"}:
+            query.setdefault("ssl", "require")
+
+        return urlunsplit(
+            (parts.scheme, parts.netloc, parts.path, urlencode(query), parts.fragment)
+        )
 
 
 @lru_cache
