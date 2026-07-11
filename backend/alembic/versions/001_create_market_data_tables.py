@@ -43,14 +43,31 @@ def upgrade() -> None:
         sa.Column("volume", sa.BigInteger, nullable=False),
     )
 
-    # ── Convert ohlcv_bars to TimescaleDB hypertable ──────────
-    # This single function call is what makes it a hypertable.
-    # TimescaleDB will automatically partition by the 'time' column.
-    # chunk_time_interval='7 days' = one partition per week.
+    # ── Convert ohlcv_bars to a TimescaleDB hypertable, if available ──
+    # On TimescaleDB-enabled infra (e.g. the timescale/timescaledb-ha
+    # image) this partitions ohlcv_bars by 'time' in weekly chunks.
+    # On plain Postgres (e.g. Neon) the extension is not available, so
+    # this block is skipped and ohlcv_bars remains a regular table —
+    # the (ticker, time) index below covers our query patterns either way.
     op.execute(
-        "SELECT create_hypertable('ohlcv_bars', 'time', "
-        "chunk_time_interval => INTERVAL '7 days', "
-        "if_not_exists => TRUE)"
+        """
+        DO $$
+        BEGIN
+            IF EXISTS (
+                SELECT 1 FROM pg_available_extensions
+                WHERE name = 'timescaledb'
+            ) THEN
+                CREATE EXTENSION IF NOT EXISTS timescaledb;
+                PERFORM create_hypertable(
+                    'ohlcv_bars',
+                    'time',
+                    chunk_time_interval => INTERVAL '7 days',
+                    if_not_exists => TRUE
+                );
+            END IF;
+        END
+        $$;
+        """
     )
 
     # ── Indexes ───────────────────────────────────────────────
