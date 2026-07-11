@@ -7,7 +7,7 @@ A full-stack quantitative research platform combining real financial algorithms,
 [![CI](https://github.com/CodeRockerr/AEQUITAS/actions/workflows/ci.yml/badge.svg)](https://github.com/CodeRockerr/AEQUITAS/actions)
 ![Python](https://img.shields.io/badge/Python-3.13-blue)
 ![Node](https://img.shields.io/badge/Node-20-green)
-![Tests](https://img.shields.io/badge/tests-141%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-152%20passing-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-lightgrey)
 
 ---
@@ -19,7 +19,7 @@ AEQUITAS is a personal research platform built to be both a serious portfolio pr
 Everything in this repo is real, working, and tested. No mocked endpoints, no placeholder data — search any ticker and the platform auto-ingests it.
 
 **Live demo:** [aequitas-three.vercel.app](https://aequitas-three.vercel.app)
-**API docs:** [aequitas-production-993d.up.railway.app/docs](https://aequitas-production-993d.up.railway.app/docs)
+**API docs:** [aequitas-api.onrender.com/docs](https://aequitas-api.onrender.com/docs)
 
 ---
 
@@ -47,7 +47,7 @@ Everything in this repo is real, working, and tested. No mocked endpoints, no pl
 flowchart TB
     subgraph Frontend["Frontend — Next.js 14, TypeScript, Recharts, lightweight-charts"]
         direction LR
-        F1["Overview"] --- F2["Dashboard"] --- F3["Backtests"] --- F4["Theses"] --- F5["Risk"] --- F6["Factors"] --- F7["About"]
+        F1["Overview"] --- F2["Dashboard"] --- F3["Backtests"] --- F4["Theses"] --- F5["Risk"] --- F6["Factors"] --- F7["Agents"] --- F8["About"]
     end
 
     subgraph API["API Layer — FastAPI, Pydantic v2, SQLAlchemy async, WebSocket"]
@@ -81,14 +81,14 @@ flowchart TB
     subgraph Data["Data Layer"]
         direction TB
         D1["yFinance ingestion"]
-        D2["TimescaleDB hypertables"]
-        D3["pgvector RAG over SEC filings"]
+        D2["Time-series OHLCV store<br/>(composite-indexed Postgres)"]
+        D3["Document chunk store<br/>for filing RAG"]
     end
 
     subgraph Storage["Storage"]
         direction LR
-        S1[("PostgreSQL /<br/>TimescaleDB +<br/>pgvector")]
-        S2[("Redis")]
+        S1[("PostgreSQL 16<br/>(Neon)")]
+        S2[("Redis<br/>(Upstash)")]
     end
 
     Frontend -->|"REST + WebSocket"| API
@@ -107,11 +107,14 @@ flowchart TB
 | Service | Platform | Notes |
 |---|---|---|
 | Frontend | Vercel | Auto-deploys on push to `main`, root directory `frontend` |
-| Backend (FastAPI) | Railway | Auto-deploys on push to `main`, root directory `backend`, `railway.json` pins the start command |
-| Database | Railway (Docker image) | `timescale/timescaledb-ha:pg16` — real TimescaleDB + pgvector + timescaledb_toolkit, not Railway's managed Postgres (which doesn't support the TimescaleDB extension) |
-| Cache | Railway managed Redis | |
+| Backend (FastAPI) | Render (free tier) | Auto-deploys on push to `main`, root directory `backend`, build `pip install .`, migrations run at startup (`alembic upgrade head && uvicorn ...`) |
+| Database | Neon (serverless Postgres 16) | Pooled (PgBouncer) connection over TLS |
+| Cache | Upstash Redis | TLS (`rediss://`), regional, LRU eviction |
+| Keep-warm | GitHub Actions | Scheduled workflow pings `/health` every 10 minutes so Render's free tier never idles into a cold start — and doubles as uptime monitoring (failed pings show red in the Actions tab) |
 
-The database runs as a custom Docker-image service rather than Railway's one-click Postgres, since managed Postgres offerings (Railway, vanilla RDS) don't ship with the TimescaleDB extension. Running the official `timescaledb-ha` image keeps local Docker Compose and production identical.
+All three infrastructure services are co-located in AWS us-west (Oregon) to keep query latency down. Total hosting cost: **$0/month**.
+
+**Portability note:** the schema migrations are written to be infrastructure-agnostic. Migration 001 converts `ohlcv_bars` into a TimescaleDB hypertable *when the extension is available* (e.g. the local `timescale/timescaledb-ha:pg16` Docker image) and falls back to a plain composite-indexed table on managed Postgres that doesn't ship the extension (e.g. Neon). At current data volumes the `(ticker, time)` index covers all query patterns either way; the hypertable comes back for free on any Timescale-capable deploy. Similarly, `config.py` translates libpq-style connection parameters (`sslmode=require`, `channel_binding`) into their asyncpg equivalents, so the same code accepts local Docker URLs and managed-Postgres connection strings unchanged.
 
 ---
 
@@ -121,17 +124,17 @@ The database runs as a custom Docker-image service rather than Railway's one-cli
 |---|---|
 | **Frontend** | Next.js 14 (App Router), TypeScript, Tailwind CSS, Recharts, lightweight-charts (TradingView) |
 | **Backend** | FastAPI, Python 3.13, Pydantic v2, SQLAlchemy 2.0 (async), native WebSocket support |
-| **Database** | PostgreSQL + TimescaleDB (hypertables), pgvector (RAG) |
-| **Cache/Queue** | Redis |
+| **Database** | PostgreSQL 16 — Neon (serverless) in production, TimescaleDB Docker image locally; migrations apply hypertables automatically where the extension exists |
+| **Cache/Queue** | Redis — Upstash in production, Docker locally |
 | **Agent Orchestration** | LangGraph 0.2 |
 | **LLM** | Groq API — `llama-3.3-70b-versatile` (free tier) |
 | **ML** | XGBoost, SHAP, hmmlearn, scikit-learn, statsmodels |
-| **Migrations** | Alembic |
-| **CI/CD** | GitHub Actions (backend + frontend jobs, branch protection) |
+| **Migrations** | Alembic (async, infrastructure-agnostic) |
+| **CI/CD** | GitHub Actions (backend + frontend jobs, branch protection, scheduled keep-warm ping) |
 | **Linting** | Ruff (backend), ESLint (frontend) |
 | **Type Checking** | Mypy (backend), TypeScript strict (frontend) |
-| **Testing** | Pytest + pytest-asyncio (141 tests) |
-| **Deployment** | Vercel (frontend) + Railway (backend, real TimescaleDB via Docker image, Redis) — **live** |
+| **Testing** | Pytest + pytest-asyncio (152 tests) |
+| **Deployment** | Vercel (frontend) + Render (backend) + Neon (Postgres) + Upstash (Redis) — **live, $0/month** |
 
 ---
 
@@ -182,7 +185,7 @@ Background refresh loop fetches a fresh price every ~12s,
 Price pushed to every connected browser watching that ticker
         ↓
 If markets are closed (weekends, holidays), falls back to the
-  last known daily close from TimescaleDB, flagged is_live=false
+  last known daily close from the database, flagged is_live=false
 ```
 
 This subscriber-based throttling is what keeps the platform within yFinance's unofficial rate limits even as usage grows — a ticker nobody is watching is never polled. The frontend's `usePriceStream()` hook queues subscriptions made before the socket finishes connecting and flushes them on open, eliminating a race condition where early subscribe calls could be silently dropped.
@@ -199,7 +202,7 @@ AEQUITAS's signature feature is a 4-node LangGraph agent that autonomously produ
 flowchart TD
     START(["START"]) --> research
 
-    research["<b>research</b><br/>Retrieves company info + SEC filing<br/>chunks via pgvector full-text search.<br/>Summarises via LLM."]
+    research["<b>research</b><br/>Retrieves company info + SEC filing<br/>chunks via full-text search over the<br/>document store. Summarises via LLM."]
     research --> quant
 
     quant["<b>quant</b><br/>Computes live regime (HMM), momentum<br/>signal, XGBoost forecast + SHAP, and<br/>VaR — using the real algorithm layer,<br/>not mocked data."]
@@ -222,6 +225,8 @@ flowchart TD
 ```
 
 This isn't a single prompt to an LLM — it's a stateful graph where each node does real computational work, and the critic node has caught genuine issues in testing (e.g. flagging a bullish verdict that contradicted bearish quant signals).
+
+Alongside the research graph, three further agents run the same pattern of real data + LLM synthesis: a **news sentiment agent** (Finnhub headlines + Groq scoring), an **earnings analysis agent** (Finnhub earnings calendar + fundamentals + Groq), and a **portfolio construction agent** (mean-variance optimisation + cointegration screening + Groq rationale) — all surfaced on the **Agents** page with live pipeline-step progress instead of a bare spinner.
 
 ---
 
@@ -257,13 +262,13 @@ AEQUITAS/
 │   │   │   ├── history.py           # full price history with auto-ingest
 │   │   │   └── websocket.py         # /ws/prices endpoint
 │   │   ├── data/
-│   │   │   └── vector/store.py      # pgvector document store for RAG
+│   │   │   └── vector/store.py      # document chunk store for RAG (full-text retrieval)
 │   │   ├── models/                  # SQLAlchemy ORM models
-│   │   ├── config.py                # pydantic-settings configuration
+│   │   ├── config.py                # pydantic-settings configuration (+ asyncpg URL translation)
 │   │   ├── db.py                    # async engine + session factory
 │   │   └── main.py                  # FastAPI app factory
-│   ├── alembic/versions/            # database migrations
-│   ├── tests/unit/                  # 141 pytest tests
+│   ├── alembic/versions/            # database migrations (TimescaleDB-optional)
+│   ├── tests/unit/                  # 152 pytest tests
 │   └── pyproject.toml
 ├── frontend/
 │   ├── app/
@@ -273,21 +278,24 @@ AEQUITAS/
 │   │   ├── theses/page.tsx          # agent thesis generator
 │   │   ├── risk/page.tsx            # VaR/CVaR + options pricer
 │   │   ├── factors/page.tsx         # Fama-French + TWAP/VWAP/Implementation Shortfall
+│   │   ├── agents/page.tsx          # news sentiment, earnings, portfolio construction agents
 │   │   ├── about/page.tsx           # marketing/about page
 │   │   └── globals.css              # design system (CSS custom properties)
 │   ├── components/
-│   │   ├── layout/                  # Sidebar, ThemeProvider
+│   │   ├── layout/                  # Sidebar (grouped nav), ThemeProvider
 │   │   ├── charts/
 │   │   │   └── CandlestickChart.tsx # lightweight-charts OHLC + volume
-│   │   └── ui/                      # PageHeader, StatCard, Badge, Spinner
+│   │   └── ui/                      # PageHeader, StatCard, Badge, Spinner, AgentProgress, InsightStrip
 │   ├── hooks/
 │   │   └── usePriceStream.ts        # WebSocket client with subscription queueing
 │   ├── lib/api.ts                   # typed API client
 │   └── package.json
 ├── infra/
-│   └── docker-compose.yml
-├── .github/workflows/ci.yml
-├── railway.json                     # pins backend start command for Railway deploys
+│   └── docker-compose.yml           # local Postgres (TimescaleDB image) + Redis
+├── .github/workflows/
+│   ├── ci.yml                       # lint, type-check, test, build
+│   └── keep-warm.yml                # scheduled /health ping (prevents Render idle spin-down)
+├── railway.json                     # legacy Railway start-command pin (pre-migration; safe to delete)
 └── README.md
 ```
 
@@ -351,10 +359,12 @@ No manual `/ingest` call needed anymore — searching a ticker on the Dashboard,
 ## Environment Variables
 
 ```bash
-# Database
-DATABASE_URL=postgresql+asyncpg://aequitas:aequitas@localhost:5433/aequitas
+# Database — plain postgresql:// works; config.py converts to asyncpg and
+# translates managed-Postgres SSL params (sslmode/channel_binding) automatically,
+# so a Neon connection string can be pasted here unchanged.
+DATABASE_URL=postgresql://aequitas:aequitas@localhost:5433/aequitas
 
-# Redis
+# Redis — rediss:// (TLS, e.g. Upstash) also supported unchanged
 REDIS_URL=redis://localhost:6379
 
 # CORS
@@ -371,7 +381,7 @@ APP_DEBUG=true
 
 > **Note on `.env` location**: place this file in the repo root. Both `backend/app/config.py` (via `env_file=["../.env", ".env"]`) and Docker Compose read from here.
 
-Frontend needs `NEXT_PUBLIC_API_URL` set to your backend URL (`http://localhost:8000` locally, the Railway URL in production).
+Frontend needs `NEXT_PUBLIC_API_URL` set to your backend URL (`http://localhost:8000` locally, the Render URL in production). It's a build-time variable — changing it on Vercel requires a redeploy.
 
 ---
 
@@ -414,7 +424,7 @@ mypy app
 pytest tests/unit/ -v
 ```
 
-**141 tests passing** across pricing, risk, portfolio optimisation, ML models, signals, pairs trading, Fama-French factor model, TWAP/VWAP/Implementation Shortfall execution algorithms, backtesting, real-time price streaming (subscriber tracking, market-closed fallback), and agent components.
+**152 tests passing** across pricing, risk, portfolio optimisation, ML models, signals, pairs trading, Fama-French factor model, TWAP/VWAP/Implementation Shortfall execution algorithms, backtesting, real-time price streaming (subscriber tracking, market-closed fallback), and agent components.
 
 Coverage threshold: 65% — the real-time/history endpoints' I/O-heavy paths (live yfinance calls, WebSocket transport) are validated through manual integration testing rather than mocked unit tests, since mocking a full async DB session plus a live WebSocket connection for every code path adds maintenance burden without catching real bugs.
 
@@ -429,6 +439,8 @@ Every push and PR triggers two GitHub Actions jobs:
 
 `main` is protected — both checks must pass before merge.
 
+A third, scheduled workflow (`keep-warm.yml`) pings the production `/health` endpoint every 10 minutes. This keeps Render's free tier from idling into a ~50s cold start, and doubles as basic uptime monitoring — a failed ping shows up red in the Actions tab.
+
 ---
 
 ## Roadmap
@@ -441,14 +453,16 @@ AEQUITAS started as an 8-week portfolio project but is being extended into a ful
 - [x] **Week 3** — Pricing & Risk: Black-Scholes, Greeks, VaR/CVaR, portfolio optimiser
 - [x] **Week 4** — ML models: HMM regime detection, XGBoost forecaster + SHAP
 - [x] **Week 5** — Signals & Backtesting: momentum signals, pairs trading + Kalman filter, vectorised backtester
-- [x] **Week 6** — Agentic layer: LangGraph 4-node graph, pgvector RAG, Groq LLM, critic revision loop
-- [x] **Week 7** — Frontend: full dashboard with dark/light theme, 6 pages, About/landing page
+- [x] **Week 6** — Agentic layer: LangGraph 4-node graph, document RAG, Groq LLM, critic revision loop
+- [x] **Week 7** — Frontend: full dashboard with dark/light theme, About/landing page
 - [x] **Week 8** — Advanced algorithms: Fama-French 3-factor model, TWAP/VWAP/Implementation Shortfall execution algorithms
-- [x] **Week 9** — Production deployment: Vercel + Railway (real TimescaleDB via Docker image, Redis), fixed a production-only feature engineering bug
+- [x] **Week 9** — Production deployment: Vercel + Railway (TimescaleDB via Docker image, Redis), fixed a production-only feature engineering bug
 - [x] **Week 10** — Real-time layer: WebSocket price streaming with subscriber-based throttling, auto-ingest on first request, market-closed fallback, full price history with candlestick charts, Factors page surfacing Fama-French and execution algorithms in the UI
+- [x] **Week 11** — Advanced agents: news sentiment agent (Finnhub + Groq), earnings analysis agent (Finnhub calendar + fundamentals + Groq), portfolio construction agent (mean-variance + cointegration + Groq); Agents page with real pipeline-step progress (AgentProgress) and Observed → Why it matters → Next action insight strips
+- [x] **Week 12** — Infra migration to a $0/month stack: Railway → Render + Neon + Upstash; infrastructure-agnostic migrations (TimescaleDB-optional hypertable), asyncpg SSL-parameter translation in config, scheduled keep-warm workflow
 
 ### In Progress / Next
-- [ ] **Advanced agents** — Earnings call analysis agent, news sentiment agent, portfolio construction agent
+- [ ] **UI/UX overhaul** — design-system pass: spacing tokens, unified Button variants, framer-motion primitives (Reveal / StaggerGrid / HoverCard / AnimatedNumber / PageTransition) applied across all pages
 
 ### Planned — Enterprise SaaS Phase
 The long-term vision is a full multi-tenant SaaS product, not just a demo. Target users: retail traders, professional quants, and institutions. Build order is a strict dependency chain:
