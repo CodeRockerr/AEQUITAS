@@ -28,4 +28,4 @@ jobs:
             || (sleep 20 && curl -fsS --max-time 60 "$HEALTH_URL" > /dev/null)
           echo "Service is warm."
         env:
-          HEALTH_URL: https://YOUR-RENDER-URL.onrender.com/health
+          HEALTH_URL: https://aequitas-api.onrender.com/health
