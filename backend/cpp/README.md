@@ -46,9 +46,19 @@ Design points:
 
 Quick (development):
 
+Linux:
+
 ```bash
 pip install pybind11
 g++ -O3 -march=native -std=c++20 -shared -fPIC \
+    $(python3 -m pybind11 --includes) kernels.cpp \
+    -o aequitas_kernels$(python3-config --extension-suffix)
+```
+
+macOS (Apple clang needs `-undefined dynamic_lookup`; skip `-march=native`):
+
+```bash
+g++ -O3 -std=c++20 -shared -fPIC -undefined dynamic_lookup \
     $(python3 -m pybind11 --includes) kernels.cpp \
     -o aequitas_kernels$(python3-config --extension-suffix)
 ```
@@ -67,32 +77,40 @@ python3 test_equivalence.py   # compares every kernel against pandas/features.py
 python3 benchmark.py          # median-of-7 timings, 10K/100K/1M rows
 ```
 
-Preliminary single-core results (Linux, g++ 13, -O3; run
-`benchmark.py` on your own hardware — numbers vary):
+Measured on Apple M-series (arm64, 8 cores), Apple clang -O3,
+Python 3.13 — run `benchmark.py` on your own hardware, numbers vary:
 
 | rows | kernel | pandas (ms) | C++ (ms) | speedup |
 |---:|---|---:|---:|---:|
-| 1,000,000 | rolling_std(21) | 44.95 | 4.84 | 9.3x |
-| 1,000,000 | rolling_max(252) | 44.56 | 17.62 | 2.5x |
-| 1,000,000 | ewm(span=12) | 22.37 | 3.21 | 7.0x |
-| 1,000,000 | rsi(14) | 96.63 | 10.06 | 9.6x |
-| 1,000,000 | atr(14) | 270.35 | 3.37 | 80.2x |
+| 1,000,000 | rolling_std(21) | 23.66 | 4.16 | 5.7x |
+| 1,000,000 | rolling_max(252) | 38.15 | 21.98 | 1.7x |
+| 1,000,000 | ewm(span=12) | 7.91 | 6.20 | 1.3x |
+| 1,000,000 | rsi(14) | 24.15 | 4.15 | 5.8x |
+| 1,000,000 | atr(14) | 109.36 | 4.09 | 26.8x |
+
+Multi-symbol parallel (RSI-14, 8 symbols × 1M rows, GIL released,
+Python `ThreadPoolExecutor`):
+
+| configuration | wall clock | speedup |
+|---|---:|---:|
+| pandas, sequential | 194.3 ms | — |
+| C++, sequential | 33.5 ms | 5.8x |
+| C++, 8 threads | 4.9 ms | **39.8x** |
 
 The spread is the point: gains are largest where the pandas formulation
-forces intermediate DataFrame construction (ATR), and smallest where
-pandas already uses an efficient algorithm (rolling max). Multi-core
-scaling of the GIL-released parallel path is being validated on
-multi-core hardware.
+forces intermediate DataFrame construction (ATR), smallest where pandas
+already uses a tight compiled path (EWM, rolling max) — and largest of
+all when the GIL-release design lets plain Python threads drive the
+kernels in parallel.
 
 ## Status / roadmap
 
 - [x] Seven core kernels, pybind11 bindings, zero-copy, GIL release
 - [x] Numerical-equivalence suite vs. the production pandas pipeline
-- [x] Preliminary single-core benchmark matrix
+- [x] Benchmark matrix incl. multi-core parallel scaling (arm64, 8 cores)
 - [x] CMake + scikit-build-core packaging
 - [ ] Drop-in C++ backend for the full 19-feature `compute_features`
-- [ ] Multi-core parallel scaling benchmarks
-- [ ] Intraday-scale datasets, warm/cold cache, NumPy-vectorized middle ground
+- [ ] Expanded matrix: x86-64, thread/symbol-count scaling, warm/cold cache, NumPy-vectorized middle ground
 - [ ] Wire into the Dockerized deployment
 
 ## Author
