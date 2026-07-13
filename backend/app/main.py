@@ -10,6 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.api.v1 import (
+    benchmark,
     advanced,
     agents,
     extended_agents,
@@ -86,6 +87,7 @@ def create_app() -> FastAPI:
     app.include_router(websocket.router, tags=["websocket"])
     app.include_router(history.router, tags=["history"])
     app.include_router(extended_agents.router, tags=["extended-agents"])
+    app.include_router(benchmark.router, tags=["benchmark"])
 
     return app
 
