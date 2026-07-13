@@ -10,9 +10,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.api.v1 import (
-    benchmark,
     advanced,
     agents,
+    benchmark,
     extended_agents,
     health,
     history,
