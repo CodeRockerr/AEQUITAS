@@ -129,6 +129,7 @@ All three infrastructure services are co-located in AWS us-west (Oregon) to keep
 | **Agent Orchestration** | LangGraph 0.2 |
 | **LLM** | Groq API — `llama-3.3-70b-versatile` (free tier) |
 | **ML** | XGBoost, SHAP, hmmlearn, scikit-learn, statsmodels |
+| **Native Extensions** | C++20 feature kernels via pybind11 (zero-copy NumPy interop, GIL-released), CMake + scikit-build-core |
 | **Migrations** | Alembic (async, infrastructure-agnostic) |
 | **CI/CD** | GitHub Actions (backend + frontend jobs, branch protection, scheduled keep-warm ping) |
 | **Linting** | Ruff (backend), ESLint (frontend) |
@@ -151,6 +152,13 @@ All three infrastructure services are co-located in AWS us-west (Oregon) to keep
 - **XGBoost return forecaster** trained with `TimeSeriesSplit` (zero lookahead bias), explained via **SHAP**
 - 19-feature engineering pipeline (returns, volatility, RSI, MACD, distance from 52-week high/low, volume ratios, etc.)
 - 52-week high/low features use `rolling(window, min_periods=1)` with a dynamically capped window, so the pipeline degrades gracefully for tickers with less than 252 days of history instead of dropping every row to `NaN`
+
+### C++ Feature Kernels *(new — CppCon 2026 poster work)*
+- The rolling-window primitives behind the 19-feature pipeline (rolling mean/std/max/min, EWM in span and Wilder parameterisations, RSI, ATR) reimplemented in **C++20**, exposed via **pybind11** with zero-copy NumPy buffer exchange and the **GIL released** around every compute loop
+- Verified numerically equivalent to the pandas implementations to ≤4e-9 (`backend/cpp/test_equivalence.py`)
+- Measured **1.3x–40x per-kernel speedups** and a **39.8x end-to-end** improvement on multi-symbol parallel workloads (8 × 1M rows RSI: 194.3 ms → 4.9 ms via `ThreadPoolExecutor` on 8 cores, Apple M-series, Apple clang -O3)
+- Live head-to-head demo on the **Python vs C++** page, backed by `GET /api/v1/benchmark/kernels` (degrades gracefully where the extension isn't built)
+- Full details, build instructions, and benchmark methodology: [`backend/cpp/README.md`](backend/cpp/README.md)
 
 ### Signals
 - **Momentum signals**: RSI, MACD, Bollinger Bands — each normalised to `[-1, +1]` and combinable into a single weighted score
@@ -260,6 +268,7 @@ AEQUITAS/
 │   │   │   ├── agents.py
 │   │   │   ├── advanced.py          # factor model + execution endpoints
 │   │   │   ├── history.py           # full price history with auto-ingest
+│   │   │   ├── benchmark.py         # live pandas-vs-C++ kernel benchmark
 │   │   │   └── websocket.py         # /ws/prices endpoint
 │   │   ├── data/
 │   │   │   └── vector/store.py      # document chunk store for RAG (full-text retrieval)
@@ -267,6 +276,12 @@ AEQUITAS/
 │   │   ├── config.py                # pydantic-settings configuration (+ asyncpg URL translation)
 │   │   ├── db.py                    # async engine + session factory
 │   │   └── main.py                  # FastAPI app factory
+│   ├── cpp/                         # C++20 feature kernels (pybind11) — see backend/cpp/README.md
+│   │   ├── kernels.cpp              # rolling/EWM/RSI/ATR kernels + bindings
+│   │   ├── test_equivalence.py      # numerical equivalence vs pandas
+│   │   ├── benchmark.py             # pandas vs C++ benchmark suite
+│   │   ├── CMakeLists.txt           # CMake build
+│   │   └── pyproject.toml           # scikit-build-core packaging (pip install ./backend/cpp)
 │   ├── alembic/versions/            # database migrations (TimescaleDB-optional)
 │   ├── tests/unit/                  # 152 pytest tests
 │   └── pyproject.toml
@@ -278,6 +293,7 @@ AEQUITAS/
 │   │   ├── theses/page.tsx          # agent thesis generator
 │   │   ├── risk/page.tsx            # VaR/CVaR + options pricer
 │   │   ├── factors/page.tsx         # Fama-French + TWAP/VWAP/Implementation Shortfall
+│   │   ├── performance/page.tsx     # live Python-vs-C++ kernel benchmark
 │   │   ├── agents/page.tsx          # news sentiment, earnings, portfolio construction agents
 │   │   ├── about/page.tsx           # marketing/about page
 │   │   └── globals.css              # design system (CSS custom properties)
@@ -410,6 +426,7 @@ Frontend needs `NEXT_PUBLIC_API_URL` set to your backend URL (`http://localhost:
 | `POST` | `/api/v1/execution/{ticker}/is` | Implementation Shortfall schedule |
 | `POST` | `/api/v1/agents/ingest-filing/{ticker}` | Store a document for RAG |
 | `POST` | `/api/v1/agents/research/{ticker}` | Run the full 4-node research agent |
+| `GET`  | `/api/v1/benchmark/kernels?rows=N` | Live pandas vs C++20 kernel benchmark |
 
 Full interactive documentation: `http://localhost:8000/docs`
 
@@ -460,8 +477,10 @@ AEQUITAS started as an 8-week portfolio project but is being extended into a ful
 - [x] **Week 10** — Real-time layer: WebSocket price streaming with subscriber-based throttling, auto-ingest on first request, market-closed fallback, full price history with candlestick charts, Factors page surfacing Fama-French and execution algorithms in the UI
 - [x] **Week 11** — Advanced agents: news sentiment agent (Finnhub + Groq), earnings analysis agent (Finnhub calendar + fundamentals + Groq), portfolio construction agent (mean-variance + cointegration + Groq); Agents page with real pipeline-step progress (AgentProgress) and Observed → Why it matters → Next action insight strips
 - [x] **Week 12** — Infra migration to a $0/month stack: Railway → Render + Neon + Upstash; infrastructure-agnostic migrations (TimescaleDB-optional hypertable), asyncpg SSL-parameter translation in config, scheduled keep-warm workflow
+- [x] **Week 13** — C++ acceleration layer: C++20 rolling-window feature kernels via pybind11 (zero-copy, GIL-released), numerical-equivalence suite, benchmark suite (1.3x–40x per kernel, 39.8x multi-symbol parallel), CMake/scikit-build-core packaging, live benchmark API + Python-vs-C++ frontend page; CppCon 2026 poster submission
 
 ### In Progress / Next
+- [ ] **C++ pipeline integration** — drop-in C++ backend for the full 19-feature `compute_features`, expanded benchmark matrix (x86-64, thread/symbol scaling, NumPy-vectorised middle ground), extension built inside the Docker/Render deployment
 - [ ] **UI/UX overhaul** — design-system pass: spacing tokens, unified Button variants, framer-motion primitives (Reveal / StaggerGrid / HoverCard / AnimatedNumber / PageTransition) applied across all pages
 
 ### Planned — Enterprise SaaS Phase
