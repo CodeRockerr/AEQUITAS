@@ -394,3 +394,26 @@ export interface EarningsAnalysisResponse {
   history_available: boolean; // ← add this line
   errors: string[];
 }
+
+// ── Benchmark (Python vs C++) ─────────────────────────────────
+export interface KernelResult {
+  kernel: string;
+  description: string;
+  pandas_ms: number;
+  cpp_ms: number | null;
+  speedup: number | null;
+  max_abs_diff: number | null;
+}
+
+export interface BenchmarkResponse {
+  rows: number;
+  reps: number;
+  cpp_available: boolean;
+  note: string;
+  results: KernelResult[];
+}
+
+export const benchmarkApi = {
+  kernels: (rows: number) =>
+    apiFetch<BenchmarkResponse>(`/api/v1/benchmark/kernels?rows=${rows}`),
+};

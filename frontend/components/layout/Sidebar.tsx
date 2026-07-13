@@ -26,6 +26,7 @@ const NAV_GROUPS = [
       { href: "/backtests", label: "Backtests", icon: "◫" },
       { href: "/risk", label: "Risk", icon: "◬" },
       { href: "/factors", label: "Factors", icon: "◇" },
+      { href: "/performance", label: "Python vs C++", icon: "◭" },
     ],
   },
 ];

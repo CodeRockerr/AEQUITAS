@@ -12,6 +12,7 @@ from fastapi.responses import JSONResponse
 from app.api.v1 import (
     advanced,
     agents,
+    benchmark,
     extended_agents,
     health,
     history,
@@ -86,6 +87,7 @@ def create_app() -> FastAPI:
     app.include_router(websocket.router, tags=["websocket"])
     app.include_router(history.router, tags=["history"])
     app.include_router(extended_agents.router, tags=["extended-agents"])
+    app.include_router(benchmark.router, tags=["benchmark"])
 
     return app
 
