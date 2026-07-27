@@ -53,12 +53,21 @@ export default function PerformancePage() {
     (a, b) => ((b.speedup ?? 0) > (a?.speedup ?? 0) ? b : a),
     data.results[0],
   );
+  const fastest = data?.results.reduce(
+    (a, b) => (b.pandas_ms < (a?.pandas_ms ?? Infinity) ? b : a),
+    data.results[0],
+  );
   const median =
-    data && data.results.every((r) => r.speedup != null)
+    data && data.cpp_available && data.results.every((r) => r.speedup != null)
       ? [...data.results]
           .map((r) => r.speedup as number)
           .sort((a, b) => a - b)[Math.floor(data.results.length / 2)]
       : null;
+  const pandasMedian = data
+    ? [...data.results]
+        .map((r) => r.pandas_ms)
+        .sort((a, b) => a - b)[Math.floor(data.results.length / 2)]
+    : null;
 
   return (
     <div>
@@ -117,6 +126,37 @@ export default function PerformancePage() {
           )}
         </div>
 
+        {data && !data.cpp_available && !loading && (
+          <div
+            className="card animate-fade-up"
+            style={{
+              padding: "14px 18px",
+              background: "var(--bg-elevated)",
+              borderLeft: "3px solid var(--accent-amber)",
+              display: "flex",
+              gap: 10,
+              alignItems: "flex-start",
+              fontSize: 13,
+              color: "var(--text-secondary)",
+            }}
+          >
+            <span
+              aria-hidden="true"
+              style={{ color: "var(--accent-amber)", fontSize: 14, lineHeight: 1.4 }}
+            >
+              ●
+            </span>
+            <span>
+              <strong style={{ color: "var(--text-primary)" }}>
+                C++ extension not built on this host.
+              </strong>{" "}
+              Showing pandas-only timings below — the speedup and
+              numerical-diff columns need the compiled kernel to compare
+              against.
+            </span>
+          </div>
+        )}
+
         {error && (
           <div style={{ color: "var(--accent-red)", fontSize: 13 }}>{error}</div>
         )}
@@ -136,87 +176,109 @@ export default function PerformancePage() {
                 label="Dataset"
                 value={data.rows.toLocaleString()}
                 sub={`rows · median of ${data.reps} runs`}
+                delay={0}
               />
               <StatCard
-                label="Median speedup"
-                value={median != null ? `${median}x` : "—"}
-                sub="across 5 kernels"
+                label={data.cpp_available ? "Median speedup" : "Median pandas time"}
+                value={
+                  data.cpp_available
+                    ? median != null
+                      ? `${median}x`
+                      : "—"
+                    : pandasMedian != null
+                      ? `${pandasMedian.toFixed(2)}ms`
+                      : "—"
+                }
+                sub={data.cpp_available ? "across 5 kernels" : "across 5 kernels, pandas only"}
                 accent="blue"
+                delay={60}
               />
               <StatCard
-                label="Best kernel"
-                value={best?.speedup != null ? `${best.speedup}x` : "—"}
-                sub={best?.kernel ?? ""}
+                label="Fastest kernel"
+                value={
+                  data.cpp_available
+                    ? best?.speedup != null
+                      ? `${best.speedup}x`
+                      : "—"
+                    : fastest
+                      ? `${fastest.pandas_ms}ms`
+                      : "—"
+                }
+                sub={(data.cpp_available ? best?.kernel : fastest?.kernel) ?? ""}
                 accent="green"
+                delay={120}
               />
               <StatCard
-                label="Max numerical diff"
+                label={data.cpp_available ? "Max numerical diff" : "C++ comparison"}
                 value={
                   data.cpp_available
                     ? Math.max(
                         ...data.results.map((r) => r.max_abs_diff ?? 0),
                       ).toExponential(1)
-                    : "—"
+                    : "Not built"
                 }
-                sub="pandas vs C++ outputs"
+                sub={data.cpp_available ? "pandas vs C++ outputs" : "see kernels README"}
+                accent={data.cpp_available ? "neutral" : "amber"}
+                delay={180}
               />
             </div>
 
-            {/* Speedup chart */}
-            {data.cpp_available && (
-              <div style={{ height: 320 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={data.results.map((r) => ({
-                      name: r.kernel,
-                      speedup: r.speedup,
-                    }))}
-                    margin={{ top: 24, right: 16, left: 0, bottom: 8 }}
-                  >
-                    <XAxis
-                      dataKey="name"
-                      tick={{ fontSize: 12, fill: "var(--text-secondary)" }}
+            {/* Speedup chart — falls back to plain pandas timings when the
+                C++ extension isn't built, instead of disappearing entirely */}
+            <div className="animate-fade-up" style={{ height: 320, animationDelay: "220ms" }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={data.results.map((r) => ({
+                    name: r.kernel,
+                    value: data.cpp_available ? r.speedup : r.pandas_ms,
+                  }))}
+                  margin={{ top: 24, right: 16, left: 0, bottom: 8 }}
+                >
+                  <XAxis
+                    dataKey="name"
+                    tick={{ fontSize: 12, fill: "var(--text-secondary)" }}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 12, fill: "var(--text-secondary)" }}
+                    label={{
+                      value: data.cpp_available ? "speedup (x)" : "pandas (ms)",
+                      angle: -90,
+                      position: "insideLeft",
+                      fontSize: 12,
+                    }}
+                  />
+                  <Tooltip
+                    formatter={(v: number) =>
+                      data.cpp_available ? [`${v}x`, "speedup"] : [`${v}ms`, "pandas"]
+                    }
+                    contentStyle={{
+                      background: "var(--bg-elevated)",
+                      border: "1px solid var(--border-subtle)",
+                      borderRadius: 8,
+                      fontSize: 12,
+                    }}
+                  />
+                  <Bar dataKey="value" radius={[6, 6, 0, 0]}>
+                    <LabelList
+                      dataKey="value"
+                      position="top"
+                      formatter={(v: number) => (data.cpp_available ? `${v}x` : `${v}ms`)}
+                      style={{ fontSize: 11, fill: "var(--text-secondary)" }}
                     />
-                    <YAxis
-                      tick={{ fontSize: 12, fill: "var(--text-secondary)" }}
-                      label={{
-                        value: "speedup (x)",
-                        angle: -90,
-                        position: "insideLeft",
-                        fontSize: 12,
-                      }}
-                    />
-                    <Tooltip
-                      formatter={(v: number) => [`${v}x`, "speedup"]}
-                      contentStyle={{
-                        background: "var(--bg-elevated)",
-                        border: "1px solid var(--border-subtle)",
-                        borderRadius: 8,
-                        fontSize: 12,
-                      }}
-                    />
-                    <Bar dataKey="speedup" radius={[6, 6, 0, 0]}>
-                      <LabelList
-                        dataKey="speedup"
-                        position="top"
-                        formatter={(v: number) => `${v}x`}
-                        style={{ fontSize: 11, fill: "var(--text-secondary)" }}
+                    {data.results.map((r) => (
+                      <Cell
+                        key={r.kernel}
+                        fill={
+                          data.cpp_available && (r.speedup ?? 0) >= 10
+                            ? "var(--accent-green)"
+                            : "var(--accent-blue)"
+                        }
                       />
-                      {data.results.map((r) => (
-                        <Cell
-                          key={r.kernel}
-                          fill={
-                            (r.speedup ?? 0) >= 10
-                              ? "var(--accent-green)"
-                              : "var(--accent-blue)"
-                          }
-                        />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            )}
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
 
             {/* Detail table */}
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
