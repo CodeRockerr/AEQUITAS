@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { ThemeProvider } from "@/components/layout/ThemeProvider";
+import { LoadingProvider } from "@/components/loading/LoadingProvider";
 
 export const metadata: Metadata = {
   title: { default: "AEQUITAS", template: "%s · AEQUITAS" },
@@ -25,10 +26,12 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body>
         <ThemeProvider>
-          <div style={{ display: "flex", minHeight: "100vh" }}>
-            <Sidebar />
-            <main style={{ flex: 1, overflow: "auto" }}>{children}</main>
-          </div>
+          <LoadingProvider>
+            <div style={{ display: "flex", minHeight: "100vh" }}>
+              <Sidebar />
+              <main style={{ flex: 1, overflow: "auto" }}>{children}</main>
+            </div>
+          </LoadingProvider>
         </ThemeProvider>
       </body>
     </html>
