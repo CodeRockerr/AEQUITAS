@@ -114,7 +114,9 @@ flowchart TB
 
 All three infrastructure services are co-located in AWS us-west (Oregon) to keep query latency down. Total hosting cost: **$0/month**.
 
-**Portability note:** the schema migrations are written to be infrastructure-agnostic. Migration 001 converts `ohlcv_bars` into a TimescaleDB hypertable *when the extension is available* (e.g. the local `timescale/timescaledb-ha:pg16` Docker image) and falls back to a plain composite-indexed table on managed Postgres that doesn't ship the extension (e.g. Neon). At current data volumes the `(ticker, time)` index covers all query patterns either way; the hypertable comes back for free on any Timescale-capable deploy. Similarly, `config.py` translates libpq-style connection parameters (`sslmode=require`, `channel_binding`) into their asyncpg equivalents, so the same code accepts local Docker URLs and managed-Postgres connection strings unchanged.
+**Portability note:** the schema migrations are written to be infrastructure-agnostic. Migration 001 converts `ohlcv_bars` into a TimescaleDB hypertable *when the extension is available* (e.g. the local `timescale/timescaledb-ha:pg16` Docker image) and falls back to a plain composite-indexed table on managed Postgres that doesn't ship the extension (e.g. Neon). At current data volumes the `(ticker, time)` index covers all query patterns either way. Similarly, `config.py` translates libpq-style connection parameters (`sslmode=require`, `channel_binding`) into their asyncpg equivalents, so the same code accepts local Docker URLs and managed-Postgres connection strings unchanged.
+
+**Cold-start handling:** Render's free tier spins down after inactivity and takes ~50-60s to cold-start. A scheduled GitHub Actions workflow pings `/health` every 10 minutes to prevent this. On first visit, a full-screen animated loading experience engages the user while the API warms up — typewriter finance facts, a catch-the-ticker mini game, a link to the author's portfolio, and a skip button. The loading screen auto-dismisses the moment the API responds.
 
 ---
 
@@ -153,7 +155,7 @@ All three infrastructure services are co-located in AWS us-west (Oregon) to keep
 - 19-feature engineering pipeline (returns, volatility, RSI, MACD, distance from 52-week high/low, volume ratios, etc.)
 - 52-week high/low features use `rolling(window, min_periods=1)` with a dynamically capped window, so the pipeline degrades gracefully for tickers with less than 252 days of history instead of dropping every row to `NaN`
 
-### C++ Feature Kernels *(new — CppCon 2026 poster work)*
+### C++ Feature Kernels *(CppCon 2026 poster work)*
 - The rolling-window primitives behind the 19-feature pipeline (rolling mean/std/max/min, EWM in span and Wilder parameterisations, RSI, ATR) reimplemented in **C++20**, exposed via **pybind11** with zero-copy NumPy buffer exchange and the **GIL released** around every compute loop
 - Verified numerically equivalent to the pandas implementations to ≤4e-9 (`backend/cpp/test_equivalence.py`)
 - Measured **1.3x–40x per-kernel speedups** and a **39.8x end-to-end** improvement on multi-symbol parallel workloads (8 × 1M rows RSI: 194.3 ms → 4.9 ms via `ThreadPoolExecutor` on 8 cores, Apple M-series, Apple clang -O3)
@@ -163,15 +165,15 @@ All three infrastructure services are co-located in AWS us-west (Oregon) to keep
 ### Signals
 - **Momentum signals**: RSI, MACD, Bollinger Bands — each normalised to `[-1, +1]` and combinable into a single weighted score
 - **Pairs trading**: Engle-Granger cointegration test + **Kalman filter** for dynamic hedge ratio estimation (more realistic than static OLS)
-- **Fama-French 3-factor model**: decomposes returns into Market, SMB (size), and HML (value) factor exposures. Reports alpha with a t-statistic, so you can tell skill from beta exposure. UI on the **Factors** page.
+- **Fama-French 3-factor model**: decomposes returns into Market, SMB (size), and HML (value) factor exposures with alpha t-statistic. UI on the **Factors** page.
 
 ### Execution Algorithms
 - **TWAP** (Time-Weighted Average Price) — splits an order equally across time intervals
-- **VWAP** (Volume-Weighted Average Price) — distributes shares proportional to a U-shaped intraday volume profile, matching real market microstructure
-- **Implementation Shortfall** — urgency-parameterised schedule that trades off market impact against timing risk; includes post-trade execution quality analysis (IS in basis points vs decision price). All three visualised as a share-distribution bar chart on the **Factors** page.
+- **VWAP** (Volume-Weighted Average Price) — distributes shares proportional to a U-shaped intraday volume profile
+- **Implementation Shortfall** — urgency-parameterised schedule; includes post-trade execution quality analysis. All three visualised as a share-distribution bar chart on the **Factors** page.
 
 ### Backtesting
-- Vectorised backtesting engine (no Python loops over time — pure numpy/pandas operations)
+- Vectorised backtesting engine (pure numpy/pandas — no Python loops over time)
 - Full tearsheet: Sharpe, Sortino, Calmar ratios, max drawdown, win rate, alpha vs buy-and-hold benchmark
 
 ---
@@ -196,9 +198,7 @@ If markets are closed (weekends, holidays), falls back to the
   last known daily close from the database, flagged is_live=false
 ```
 
-This subscriber-based throttling is what keeps the platform within yFinance's unofficial rate limits even as usage grows — a ticker nobody is watching is never polled. The frontend's `usePriceStream()` hook queues subscriptions made before the socket finishes connecting and flushes them on open, eliminating a race condition where early subscribe calls could be silently dropped.
-
-The **Dashboard** page also supports searching any ticker for a full price history — candlestick chart with volume, auto-ingesting the complete history (`period=max`, back to IPO/listing day) the first time a ticker is requested, with 1M/6M/1Y/5Y/All range controls.
+The **Dashboard** page supports searching any ticker for full price history — candlestick chart with volume, auto-ingesting back to IPO/listing day on first request, with 1M/6M/1Y/5Y/All range controls.
 
 ---
 
@@ -210,13 +210,13 @@ AEQUITAS's signature feature is a 4-node LangGraph agent that autonomously produ
 flowchart TD
     START(["START"]) --> research
 
-    research["<b>research</b><br/>Retrieves company info + SEC filing<br/>chunks via full-text search over the<br/>document store. Summarises via LLM."]
+    research["<b>research</b><br/>Retrieves company info + SEC filing<br/>chunks via full-text search.<br/>Summarises via LLM."]
     research --> quant
 
-    quant["<b>quant</b><br/>Computes live regime (HMM), momentum<br/>signal, XGBoost forecast + SHAP, and<br/>VaR — using the real algorithm layer,<br/>not mocked data."]
+    quant["<b>quant</b><br/>Computes live regime (HMM), momentum<br/>signal, XGBoost forecast + SHAP, and<br/>VaR — using the real algorithm layer."]
     quant --> thesis_gen
 
-    thesis_gen["<b>thesis_gen</b><br/>LLM synthesises a structured thesis:<br/>Overview, Bull Case, Bear Case, Quant<br/>Evidence, Risk Factors, Verdict —<br/>citing the research above."]
+    thesis_gen["<b>thesis_gen</b><br/>LLM synthesises a structured thesis:<br/>Overview, Bull Case, Bear Case, Quant<br/>Evidence, Risk Factors, Verdict."]
     thesis_gen --> critic
 
     critic["<b>critic</b><br/>LLM critiques its own thesis:<br/>unsupported claims, missing risks,<br/>inconsistencies with quant data."]
@@ -232,9 +232,7 @@ flowchart TD
     style critic fill:#FBF4E6,color:#111
 ```
 
-This isn't a single prompt to an LLM — it's a stateful graph where each node does real computational work, and the critic node has caught genuine issues in testing (e.g. flagging a bullish verdict that contradicted bearish quant signals).
-
-Alongside the research graph, three further agents run the same pattern of real data + LLM synthesis: a **news sentiment agent** (Finnhub headlines + Groq scoring), an **earnings analysis agent** (Finnhub earnings calendar + fundamentals + Groq), and a **portfolio construction agent** (mean-variance optimisation + cointegration screening + Groq rationale) — all surfaced on the **Agents** page with live pipeline-step progress instead of a bare spinner.
+Alongside the research graph, three further standalone agents: **news sentiment** (Finnhub headlines + Groq), **earnings analysis** (Finnhub calendar + fundamentals + Groq), and **portfolio construction** (mean-variance + cointegration + Groq) — all on the **Agents** page with live pipeline-step progress indicators and Observed → Why it matters → Next action insight strips.
 
 ---
 
@@ -253,7 +251,7 @@ AEQUITAS/
 │   │   │   ├── risk/                # VaR/CVaR
 │   │   │   ├── portfolio/           # mean-variance optimiser
 │   │   │   ├── ml/                  # HMM regime, XGBoost forecaster, features
-│   │   │   ├── signals/             # momentum, pairs trading, Fama-French factor model
+│   │   │   ├── signals/             # momentum, pairs trading, Fama-French
 │   │   │   ├── execution/           # TWAP, VWAP, Implementation Shortfall
 │   │   │   └── backtesting/         # vectorised backtest engine
 │   │   ├── services/
@@ -261,43 +259,48 @@ AEQUITAS/
 │   │   ├── api/v1/                  # FastAPI routers
 │   │   │   ├── health.py
 │   │   │   ├── market_data.py
-│   │   │   ├── market_data_autofetch.py  # auto-ingest on first request
+│   │   │   ├── market_data_autofetch.py
 │   │   │   ├── pricing.py
 │   │   │   ├── ml.py
 │   │   │   ├── signals.py
 │   │   │   ├── agents.py
+│   │   │   ├── extended_agents.py   # news sentiment, earnings, portfolio agents
 │   │   │   ├── advanced.py          # factor model + execution endpoints
 │   │   │   ├── history.py           # full price history with auto-ingest
 │   │   │   ├── benchmark.py         # live pandas-vs-C++ kernel benchmark
 │   │   │   └── websocket.py         # /ws/prices endpoint
 │   │   ├── data/
-│   │   │   └── vector/store.py      # document chunk store for RAG (full-text retrieval)
+│   │   │   └── vector/store.py      # document chunk store for RAG
 │   │   ├── models/                  # SQLAlchemy ORM models
-│   │   ├── config.py                # pydantic-settings configuration (+ asyncpg URL translation)
+│   │   ├── config.py                # pydantic-settings + asyncpg URL translation
 │   │   ├── db.py                    # async engine + session factory
 │   │   └── main.py                  # FastAPI app factory
-│   ├── cpp/                         # C++20 feature kernels (pybind11) — see backend/cpp/README.md
+│   ├── cpp/                         # C++20 feature kernels (pybind11)
 │   │   ├── kernels.cpp              # rolling/EWM/RSI/ATR kernels + bindings
-│   │   ├── test_equivalence.py      # numerical equivalence vs pandas
+│   │   ├── test_equivalence.py      # numerical equivalence vs pandas (≤4e-9)
 │   │   ├── benchmark.py             # pandas vs C++ benchmark suite
-│   │   ├── CMakeLists.txt           # CMake build
-│   │   └── pyproject.toml           # scikit-build-core packaging (pip install ./backend/cpp)
-│   ├── alembic/versions/            # database migrations (TimescaleDB-optional)
+│   │   ├── CMakeLists.txt
+│   │   └── pyproject.toml           # scikit-build-core (pip install ./backend/cpp)
+│   ├── alembic/versions/            # infrastructure-agnostic migrations
 │   ├── tests/unit/                  # 152 pytest tests
 │   └── pyproject.toml
 ├── frontend/
 │   ├── app/
-│   │   ├── page.tsx                 # Overview / landing — real-time ticker tape
-│   │   ├── dashboard/page.tsx       # live signals, regime, SHAP, candlestick chart, ticker search
+│   │   ├── page.tsx                 # Overview — real-time ticker tape
+│   │   ├── dashboard/page.tsx       # live signals, regime, SHAP, candlestick chart
 │   │   ├── backtests/page.tsx       # strategy runner + equity curve
 │   │   ├── theses/page.tsx          # agent thesis generator
 │   │   ├── risk/page.tsx            # VaR/CVaR + options pricer
-│   │   ├── factors/page.tsx         # Fama-French + TWAP/VWAP/Implementation Shortfall
-│   │   ├── performance/page.tsx     # live Python-vs-C++ kernel benchmark
-│   │   ├── agents/page.tsx          # news sentiment, earnings, portfolio construction agents
-│   │   ├── about/page.tsx           # marketing/about page
+│   │   ├── factors/page.tsx         # Fama-French + execution algorithms
+│   │   ├── performance/page.tsx     # Python vs C++ live benchmark
+│   │   ├── agents/page.tsx          # news sentiment, earnings, portfolio agents
+│   │   ├── about/page.tsx
 │   │   └── globals.css              # design system (CSS custom properties)
 │   ├── components/
+│   │   ├── loading/                 # animated loading screen (cold-start UX)
+│   │   │   ├── LoadingScreen.tsx    # typewriter facts, catch-the-ticker game, portfolio link
+│   │   │   ├── LoadingProvider.tsx  # polls /health, auto-dismisses on connect (90s cap)
+│   │   │   └── facts.ts             # 15 verified trading/finance facts
 │   │   ├── layout/                  # Sidebar (grouped nav), ThemeProvider
 │   │   ├── charts/
 │   │   │   └── CandlestickChart.tsx # lightweight-charts OHLC + volume
@@ -307,11 +310,10 @@ AEQUITAS/
 │   ├── lib/api.ts                   # typed API client
 │   └── package.json
 ├── infra/
-│   └── docker-compose.yml           # local Postgres (TimescaleDB image) + Redis
+│   └── docker-compose.yml           # local Postgres (TimescaleDB) + Redis
 ├── .github/workflows/
 │   ├── ci.yml                       # lint, type-check, test, build
-│   └── keep-warm.yml                # scheduled /health ping (prevents Render idle spin-down)
-├── railway.json                     # legacy Railway start-command pin (pre-migration; safe to delete)
+│   └── keep-warm.yml                # /health ping every 10 min — prevents Render idle spin-down
 └── README.md
 ```
 
@@ -330,7 +332,7 @@ AEQUITAS/
 ```bash
 git clone https://github.com/CodeRockerr/AEQUITAS.git
 cd AEQUITAS
-cp .env.example .env   # then fill in your values, see below
+cp .env.example .env   # fill in your values — see Environment Variables below
 ```
 
 ### 2. Start infrastructure (Postgres + Redis)
@@ -368,16 +370,14 @@ App available at `http://localhost:3000`
 curl -X POST "http://localhost:8000/api/v1/agents/research/AAPL"
 ```
 
-No manual `/ingest` call needed anymore — searching a ticker on the Dashboard, or subscribing to it via WebSocket, triggers auto-ingestion transparently.
-
 ---
 
 ## Environment Variables
 
 ```bash
-# Database — plain postgresql:// works; config.py converts to asyncpg and
-# translates managed-Postgres SSL params (sslmode/channel_binding) automatically,
-# so a Neon connection string can be pasted here unchanged.
+# Database — config.py converts to asyncpg and translates managed-Postgres
+# SSL params (sslmode/channel_binding) automatically; Neon connection strings
+# can be pasted here unchanged.
 DATABASE_URL=postgresql://aequitas:aequitas@localhost:5433/aequitas
 
 # Redis — rediss:// (TLS, e.g. Upstash) also supported unchanged
@@ -390,14 +390,17 @@ CORS_ORIGINS=["http://localhost:3000"]
 GROQ_API_KEY=gsk_your_key_here
 GROQ_MODEL=llama-3.3-70b-versatile
 
+# Finnhub (free tier — news sentiment + earnings agents)
+FINNHUB_API_KEY=your_finnhub_key_here
+
 # App
 APP_ENV=development
 APP_DEBUG=true
 ```
 
-> **Note on `.env` location**: place this file in the repo root. Both `backend/app/config.py` (via `env_file=["../.env", ".env"]`) and Docker Compose read from here.
+> `.env` lives in the repo root. `backend/app/config.py` reads it via `env_file=["../.env", ".env"]` and Docker Compose reads it directly.
 
-Frontend needs `NEXT_PUBLIC_API_URL` set to your backend URL (`http://localhost:8000` locally, the Render URL in production). It's a build-time variable — changing it on Vercel requires a redeploy.
+Frontend needs `NEXT_PUBLIC_API_URL` pointing at your backend (`http://localhost:8000` locally, the Render URL in production). It is a **build-time** variable — changing it on Vercel requires a redeploy.
 
 ---
 
@@ -407,11 +410,11 @@ Frontend needs `NEXT_PUBLIC_API_URL` set to your backend URL (`http://localhost:
 |---|---|---|
 | `GET`  | `/health` | Liveness check |
 | `WS`   | `/ws/prices` | Real-time price streaming — subscribe/unsubscribe to any ticker |
-| `GET`  | `/api/v1/ws/status` | Debug: which tickers currently have active refresh loops |
+| `GET`  | `/api/v1/ws/status` | Debug: tickers with active refresh loops |
 | `POST` | `/api/v1/market-data/{ticker}/ingest` | Manually ingest OHLCV data from yFinance |
 | `GET`  | `/api/v1/market-data/{ticker}/bars` | Retrieve stored price bars |
 | `GET`  | `/api/v1/market-data/{ticker}/info` | Company info (name, sector, description, market cap) |
-| `GET`  | `/api/v1/history/{ticker}?range=1mo\|6mo\|1y\|5y\|max` | Full price history, auto-ingests if needed |
+| `GET`  | `/api/v1/history/{ticker}?range_=1mo\|6mo\|1y\|5y\|max` | Full price history, auto-ingests if needed |
 | `POST` | `/api/v1/pricing/black-scholes` | Price an option + Greeks |
 | `POST` | `/api/v1/risk/var` | Compute VaR/CVaR |
 | `POST` | `/api/v1/ml/regime/{ticker}` | HMM regime detection |
@@ -426,9 +429,12 @@ Frontend needs `NEXT_PUBLIC_API_URL` set to your backend URL (`http://localhost:
 | `POST` | `/api/v1/execution/{ticker}/is` | Implementation Shortfall schedule |
 | `POST` | `/api/v1/agents/ingest-filing/{ticker}` | Store a document for RAG |
 | `POST` | `/api/v1/agents/research/{ticker}` | Run the full 4-node research agent |
+| `POST` | `/api/v1/agents/news-sentiment/{ticker}` | News sentiment agent (Finnhub + Groq) |
+| `POST` | `/api/v1/agents/earnings/{ticker}` | Earnings analysis agent (Finnhub + Groq) |
+| `POST` | `/api/v1/agents/portfolio` | Portfolio construction agent |
 | `GET`  | `/api/v1/benchmark/kernels?rows=N` | Live pandas vs C++20 kernel benchmark |
 
-Full interactive documentation: `http://localhost:8000/docs`
+Full interactive docs: `http://localhost:8000/docs`
 
 ---
 
@@ -441,9 +447,9 @@ mypy app
 pytest tests/unit/ -v
 ```
 
-**152 tests passing** across pricing, risk, portfolio optimisation, ML models, signals, pairs trading, Fama-French factor model, TWAP/VWAP/Implementation Shortfall execution algorithms, backtesting, real-time price streaming (subscriber tracking, market-closed fallback), and agent components.
+**152 tests passing** across pricing, risk, portfolio optimisation, ML models, signals, pairs trading, Fama-French, TWAP/VWAP/IS execution, backtesting, real-time price streaming, and all agent components.
 
-Coverage threshold: 65% — the real-time/history endpoints' I/O-heavy paths (live yfinance calls, WebSocket transport) are validated through manual integration testing rather than mocked unit tests, since mocking a full async DB session plus a live WebSocket connection for every code path adds maintenance burden without catching real bugs.
+Coverage threshold: 65% — I/O-heavy paths (live yfinance calls, WebSocket transport) are validated through manual integration testing.
 
 ---
 
@@ -456,13 +462,11 @@ Every push and PR triggers two GitHub Actions jobs:
 
 `main` is protected — both checks must pass before merge.
 
-A third, scheduled workflow (`keep-warm.yml`) pings the production `/health` endpoint every 10 minutes. This keeps Render's free tier from idling into a ~50s cold start, and doubles as basic uptime monitoring — a failed ping shows up red in the Actions tab.
+A third scheduled workflow (`keep-warm.yml`) pings `/health` every 10 minutes, preventing Render idle spin-down and doubling as uptime monitoring.
 
 ---
 
 ## Roadmap
-
-AEQUITAS started as an 8-week portfolio project but is being extended into a full enterprise-grade SaaS platform. Build order matters here — each phase depends on the previous one.
 
 ### Completed
 - [x] **Week 1** — Foundation: Docker Compose, FastAPI skeleton, Next.js shell, CI/CD
@@ -471,27 +475,25 @@ AEQUITAS started as an 8-week portfolio project but is being extended into a ful
 - [x] **Week 4** — ML models: HMM regime detection, XGBoost forecaster + SHAP
 - [x] **Week 5** — Signals & Backtesting: momentum signals, pairs trading + Kalman filter, vectorised backtester
 - [x] **Week 6** — Agentic layer: LangGraph 4-node graph, document RAG, Groq LLM, critic revision loop
-- [x] **Week 7** — Frontend: full dashboard with dark/light theme, About/landing page
-- [x] **Week 8** — Advanced algorithms: Fama-French 3-factor model, TWAP/VWAP/Implementation Shortfall execution algorithms
-- [x] **Week 9** — Production deployment: Vercel + Railway (TimescaleDB via Docker image, Redis), fixed a production-only feature engineering bug
-- [x] **Week 10** — Real-time layer: WebSocket price streaming with subscriber-based throttling, auto-ingest on first request, market-closed fallback, full price history with candlestick charts, Factors page surfacing Fama-French and execution algorithms in the UI
-- [x] **Week 11** — Advanced agents: news sentiment agent (Finnhub + Groq), earnings analysis agent (Finnhub calendar + fundamentals + Groq), portfolio construction agent (mean-variance + cointegration + Groq); Agents page with real pipeline-step progress (AgentProgress) and Observed → Why it matters → Next action insight strips
-- [x] **Week 12** — Infra migration to a $0/month stack: Railway → Render + Neon + Upstash; infrastructure-agnostic migrations (TimescaleDB-optional hypertable), asyncpg SSL-parameter translation in config, scheduled keep-warm workflow
-- [x] **Week 13** — C++ acceleration layer: C++20 rolling-window feature kernels via pybind11 (zero-copy, GIL-released), numerical-equivalence suite, benchmark suite (1.3x–40x per kernel, 39.8x multi-symbol parallel), CMake/scikit-build-core packaging, live benchmark API + Python-vs-C++ frontend page; CppCon 2026 poster submission
+- [x] **Week 7** — Frontend: full dashboard with dark/light theme, 8 pages, About/landing page
+- [x] **Week 8** — Advanced algorithms: Fama-French 3-factor model, TWAP/VWAP/Implementation Shortfall
+- [x] **Week 9** — Production deployment: Vercel + Railway (TimescaleDB, Redis), fixed production-only ML bug
+- [x] **Week 10** — Real-time layer: WebSocket streaming, auto-ingest, market-closed fallback, candlestick charts, Factors page
+- [x] **Week 11** — Advanced agents: news sentiment, earnings analysis, portfolio construction; AgentProgress + InsightStrip UX patterns
+- [x] **Week 12** — Infra migration to $0/month: Railway → Render + Neon + Upstash; infrastructure-agnostic migrations, asyncpg SSL translation, scheduled keep-warm workflow
+- [x] **Week 13** — C++ acceleration layer: C++20 rolling-window kernels via pybind11 (GIL-released, zero-copy), 1.3x–40x per-kernel speedups, 39.8x end-to-end multi-symbol parallel, CMake/scikit-build-core packaging, live benchmark page; CppCon 2026 poster submission
+- [x] **Week 14** — Cold-start UX: animated loading screen with typewriter finance facts, catch-the-ticker mini game, portfolio link, auto-dismiss on API connect (90s cap for Render free tier)
 
 ### In Progress / Next
-- [ ] **C++ pipeline integration** — drop-in C++ backend for the full 19-feature `compute_features`, expanded benchmark matrix (x86-64, thread/symbol scaling, NumPy-vectorised middle ground), extension built inside the Docker/Render deployment
-- [ ] **UI/UX overhaul** — design-system pass: spacing tokens, unified Button variants, framer-motion primitives (Reveal / StaggerGrid / HoverCard / AnimatedNumber / PageTransition) applied across all pages
+- [ ] **C++ pipeline integration** — full 19-feature `compute_features` C++ backend, expanded benchmark matrix (x86-64, thread/symbol scaling), extension built inside Render deployment
+- [ ] **UI/UX design-system pass** — spacing tokens, unified Button variants, framer-motion primitives across all pages
 
 ### Planned — Enterprise SaaS Phase
-The long-term vision is a full multi-tenant SaaS product, not just a demo. Target users: retail traders, professional quants, and institutions. Build order is a strict dependency chain:
-
-1. **Auth + RBAC** — NextAuth.js, email/password + OAuth, Free/Pro/Admin roles. Everything below depends on this.
-2. **Billing** — Stripe subscriptions, usage-based rate limiting per plan tier
-3. **Consumer dashboard** — personalised watchlists, saved thesis history, portfolio tracker with live VaR alerts
-4. **Admin panel** — user management, usage metrics, revenue dashboard, API key issuance
-5. **API access** — programmatic API keys for quant/institutional users with usage-based pricing
-6. **Scale** — rate limiting, caching layer, error monitoring (Sentry), product analytics (PostHog)
+1. **Auth + RBAC** — NextAuth.js, email/password + OAuth, role tiers
+2. **Billing** — Stripe subscriptions, usage-based rate limiting
+3. **Consumer dashboard** — watchlists, saved thesis history, portfolio tracker with live VaR alerts
+4. **Admin panel** — user management, usage metrics, API key issuance
+5. **Scale** — rate limiting, Sentry, PostHog
 
 ---
 
@@ -500,12 +502,12 @@ The long-term vision is a full multi-tenant SaaS product, not just a demo. Targe
 **Adit Shah**
 MS Computer Science, NC State University
 
-- GitHub: [@GitHub](https://github.com/CodeRockerr)
+- GitHub: [@CodeRockerr](https://github.com/CodeRockerr)
 - LinkedIn: [@LinkedIn](https://www.linkedin.com/in/shah-adit0404/)
 - Portfolio: [@Portfolio](https://adit-2d-portfolio.vercel.app/)
 - Resume: [@Resume](https://drive.google.com/file/d/16_bFetVUPBOT01t3aSIqqDIR703DT7Lc/view?usp=sharing)
 
-Built as a deep-dive into production quantitative systems, agentic AI architecture, real-time systems design, and full-stack engineering — with the explicit goal of being both a credible job-application portfolio piece and the seed of a real fintech product.
+Built as a deep-dive into production quantitative systems, agentic AI architecture, real-time systems design, full-stack engineering, and native C++ acceleration — with the explicit goal of being both a credible job-application portfolio piece and the seed of a real fintech product.
 
 ---
 

@@ -22,7 +22,7 @@ const LoadingContext = createContext<LoadingContextValue>({
 export const useLoading = () => useContext(LoadingContext);
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
-const MAX_WAIT_MS = 25000; // dismiss automatically after 25s regardless
+const MAX_WAIT_MS = 90000; // dismiss automatically after 90s — Render free tier cold start can take ~50-60s
 
 export function LoadingProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
@@ -58,7 +58,7 @@ export function LoadingProvider({ children }: { children: ReactNode }) {
         } catch {
           // API not ready yet — keep polling
         }
-        await new Promise((r) => setTimeout(r, 1500));
+        await new Promise((r) => setTimeout(r, 2000));
       }
     }
 
