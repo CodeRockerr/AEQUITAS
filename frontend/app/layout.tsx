@@ -3,6 +3,7 @@ import "./globals.css";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { ThemeProvider } from "@/components/layout/ThemeProvider";
 import { LoadingProvider } from "@/components/loading/LoadingProvider";
+import { ChatWidget } from "@/components/chat/ChatWidget";
 
 export const metadata: Metadata = {
   title: { default: "AEQUITAS", template: "%s · AEQUITAS" },
@@ -31,6 +32,7 @@ export default function RootLayout({
               <Sidebar />
               <main style={{ flex: 1, overflow: "auto" }}>{children}</main>
             </div>
+            <ChatWidget />
           </LoadingProvider>
         </ThemeProvider>
       </body>

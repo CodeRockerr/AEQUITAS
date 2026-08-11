@@ -13,6 +13,7 @@ from app.api.v1 import (
     advanced,
     agents,
     benchmark,
+    chat,
     extended_agents,
     health,
     history,
@@ -88,6 +89,7 @@ def create_app() -> FastAPI:
     app.include_router(history.router, tags=["history"])
     app.include_router(extended_agents.router, tags=["extended-agents"])
     app.include_router(benchmark.router, tags=["benchmark"])
+    app.include_router(chat.router, tags=["chat"])
 
     return app
 
