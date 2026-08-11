@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "./ThemeProvider";
+import { SITE_STATS } from "@/lib/site-stats";
 
-// Grouped nav reduces top-level cognitive load — research backing:
-// reducing stimuli and clarifying intent improves trust and usability
-// in data-dense interfaces. 8 flat items → 2 ungrouped + 2 groups.
+// Grouped nav reduces top-level cognitive load: research backing
+// shows that reducing stimuli and clarifying intent improves trust and
+// usability in data-dense interfaces. 8 flat items -> 2 ungrouped + 2 groups.
 const NAV_TOP = [
   { href: "/", label: "Overview", icon: "○" },
   { href: "/dashboard", label: "Dashboard", icon: "◈" },
@@ -33,7 +34,7 @@ const NAV_GROUPS = [
 
 const NAV_BOTTOM = [{ href: "/about", label: "About", icon: "◉" }];
 
-const VERSION = "v0.10.1";
+const VERSION = SITE_STATS.version;
 
 function NavLink({
   href,
@@ -49,6 +50,7 @@ function NavLink({
   return (
     <Link
       href={href}
+      className={`nav-link${active ? " nav-link-active" : ""}`}
       style={{
         display: "flex",
         alignItems: "center",
@@ -57,17 +59,7 @@ function NavLink({
         borderRadius: "var(--radius-md)",
         marginBottom: "2px",
         textDecoration: "none",
-        background: active ? "var(--bg-elevated)" : "transparent",
         transition: "all var(--duration-fast)",
-      }}
-      onMouseEnter={(e) => {
-        if (!active)
-          (e.currentTarget as HTMLElement).style.background =
-            "var(--bg-elevated)";
-      }}
-      onMouseLeave={(e) => {
-        if (!active)
-          (e.currentTarget as HTMLElement).style.background = "transparent";
       }}
     >
       <span

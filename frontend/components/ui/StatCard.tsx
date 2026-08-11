@@ -7,7 +7,7 @@ interface StatCardProps {
 }
 
 /**
- * Directional glyph paired with each accent color — never rely on
+ * Directional glyph paired with each accent color. Never rely on
  * color alone to convey meaning (accessibility: color-blind users
  * can't reliably distinguish red/green hue differences).
  */

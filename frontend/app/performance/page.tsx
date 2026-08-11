@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * AEQUITAS — Performance page
+ * AEQUITAS: Performance page
  *
  * Live head-to-head benchmark of the pandas feature-engineering
  * kernels vs their C++20/pybind11 counterparts, run on the API host.
@@ -73,7 +73,7 @@ export default function PerformancePage() {
     <div>
       <PageHeader
         title="Python vs C++"
-        subtitle="Feature kernels benchmarked live on the API host — pandas vs C++20/pybind11"
+        subtitle="Feature kernels benchmarked live on the API host: pandas vs C++20/pybind11"
         serif
       />
 
@@ -110,12 +110,13 @@ export default function PerformancePage() {
               border: "none",
               background: "var(--accent-blue)",
               color: "#fff",
-              cursor: loading ? "wait" : "pointer",
+              cursor: loading ? "not-allowed" : "pointer",
+              opacity: loading ? 0.55 : 1,
               fontSize: 13,
               fontWeight: 600,
             }}
           >
-            {loading ? "Running…" : "Run benchmark"}
+            {loading ? "Running..." : "Run benchmark"}
           </button>
           {data && (
             <Badge variant={data.cpp_available ? "green" : "amber"}>
@@ -126,44 +127,94 @@ export default function PerformancePage() {
           )}
         </div>
 
-        {data && !data.cpp_available && !loading && (
-          <div
-            className="card animate-fade-up"
-            style={{
-              padding: "14px 18px",
-              background: "var(--bg-elevated)",
-              borderLeft: "3px solid var(--accent-amber)",
-              display: "flex",
-              gap: 10,
-              alignItems: "flex-start",
-              fontSize: 13,
-              color: "var(--text-secondary)",
-            }}
-          >
+        {error && (
+          <div style={{ color: "var(--accent-red)", fontSize: 13 }}>{error}</div>
+        )}
+
+        {/* Initial run: no prior results to keep on screen, so show a plain spinner. */}
+        {loading && !data && (
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <Spinner size={20} />
             <span
-              aria-hidden="true"
-              style={{ color: "var(--accent-amber)", fontSize: 14, lineHeight: 1.4 }}
+              style={{
+                fontFamily: "var(--font-mono)",
+                fontSize: 12,
+                color: "var(--text-tertiary)",
+              }}
             >
-              ●
-            </span>
-            <span>
-              <strong style={{ color: "var(--text-primary)" }}>
-                C++ extension not built on this host.
-              </strong>{" "}
-              Showing pandas-only timings below — the speedup and
-              numerical-diff columns need the compiled kernel to compare
-              against.
+              Running benchmark...
             </span>
           </div>
         )}
 
-        {error && (
-          <div style={{ color: "var(--accent-red)", fontSize: 13 }}>{error}</div>
-        )}
-        {loading && <Spinner />}
+        {/* Re-run: keep the last results visible (dimmed) instead of
+            unmounting the whole section and flashing it blank. */}
+        {data && (
+          <div
+            style={{
+              display: "grid",
+              gap: 24,
+              position: "relative",
+              opacity: loading ? 0.5 : 1,
+              pointerEvents: loading ? "none" : "auto",
+              transition: "opacity var(--duration-base) var(--ease-out)",
+            }}
+          >
+            {loading && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: "-28px",
+                  right: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
+                <Spinner size={14} />
+                <span
+                  style={{
+                    fontFamily: "var(--font-mono)",
+                    fontSize: 11,
+                    color: "var(--text-tertiary)",
+                  }}
+                >
+                  Re-running...
+                </span>
+              </div>
+            )}
 
-        {data && !loading && (
-          <>
+            {!data.cpp_available && (
+              <div
+                className="card animate-fade-up"
+                style={{
+                  padding: "14px 18px",
+                  background: "var(--bg-elevated)",
+                  borderLeft: "3px solid var(--accent-amber)",
+                  display: "flex",
+                  gap: 10,
+                  alignItems: "flex-start",
+                  fontSize: 13,
+                  color: "var(--text-secondary)",
+                }}
+              >
+                <span
+                  aria-hidden="true"
+                  style={{ color: "var(--accent-amber)", fontSize: 14, lineHeight: 1.4 }}
+                >
+                  ●
+                </span>
+                <span>
+                  <strong style={{ color: "var(--text-primary)" }}>
+                    C++ extension not built on this host.
+                  </strong>{" "}
+                  Showing pandas-only timings below. The speedup and
+                  numerical-diff columns need the compiled kernel to compare
+                  against.
+                </span>
+              </div>
+            )}
+
             {/* Headline stats */}
             <div
               style={{
@@ -184,10 +235,10 @@ export default function PerformancePage() {
                   data.cpp_available
                     ? median != null
                       ? `${median}x`
-                      : "—"
+                      : "N/A"
                     : pandasMedian != null
                       ? `${pandasMedian.toFixed(2)}ms`
-                      : "—"
+                      : "N/A"
                 }
                 sub={data.cpp_available ? "across 5 kernels" : "across 5 kernels, pandas only"}
                 accent="blue"
@@ -199,10 +250,10 @@ export default function PerformancePage() {
                   data.cpp_available
                     ? best?.speedup != null
                       ? `${best.speedup}x`
-                      : "—"
+                      : "N/A"
                     : fastest
                       ? `${fastest.pandas_ms}ms`
-                      : "—"
+                      : "N/A"
                 }
                 sub={(data.cpp_available ? best?.kernel : fastest?.kernel) ?? ""}
                 accent="green"
@@ -223,7 +274,7 @@ export default function PerformancePage() {
               />
             </div>
 
-            {/* Speedup chart — falls back to plain pandas timings when the
+            {/* Speedup chart: falls back to plain pandas timings when the
                 C++ extension isn't built, instead of disappearing entirely */}
             <div className="animate-fade-up" style={{ height: 320, animationDelay: "220ms" }}>
               <ResponsiveContainer width="100%" height="100%">
@@ -314,12 +365,12 @@ export default function PerformancePage() {
                       {r.description}
                     </td>
                     <td style={{ padding: "8px 12px" }}>{r.pandas_ms}</td>
-                    <td style={{ padding: "8px 12px" }}>{r.cpp_ms ?? "—"}</td>
+                    <td style={{ padding: "8px 12px" }}>{r.cpp_ms ?? "N/A"}</td>
                     <td style={{ padding: "8px 12px", fontWeight: 600 }}>
-                      {r.speedup != null ? `${r.speedup}x` : "—"}
+                      {r.speedup != null ? `${r.speedup}x` : "N/A"}
                     </td>
                     <td style={{ padding: "8px 12px", fontFamily: "var(--font-mono)" }}>
-                      {r.max_abs_diff != null ? r.max_abs_diff.toExponential(1) : "—"}
+                      {r.max_abs_diff != null ? r.max_abs_diff.toExponential(1) : "N/A"}
                     </td>
                   </tr>
                 ))}
@@ -328,11 +379,11 @@ export default function PerformancePage() {
 
             <p style={{ fontSize: 12, color: "var(--text-secondary)", maxWidth: 720 }}>
               {data.note} Speedups vary by host; the spread across kernels is
-              the interesting result — largest where the pandas formulation
+              the interesting result: largest where the pandas formulation
               builds intermediate DataFrames (ATR), smallest where pandas is
               already algorithmically efficient (rolling max).
             </p>
-          </>
+          </div>
         )}
       </div>
     </div>

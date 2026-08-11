@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * AEQUITAS — Candlestick + volume chart using TradingView's
+ * AEQUITAS: Candlestick + volume chart using TradingView's
  * lightweight-charts library (v5 API).
  *
  * Renders OHLC candles in the main pane and a volume histogram
@@ -80,13 +80,19 @@ export function CandlestickChart({
       },
     });
 
+    // Candle colors mirror --accent-green/--accent-red per theme (lightweight-charts
+    // renders to canvas, which can't resolve CSS custom properties, so the literal
+    // hex has to be duplicated here rather than referencing globals.css directly).
+    const upColor = isDark ? "#4AE891" : "#1A6B4A";
+    const downColor = isDark ? "#F06B6B" : "#B83232";
+
     const candleSeries = chart.addSeries(CandlestickSeries, {
-      upColor: "#1A6B4A",
-      downColor: "#B83232",
-      borderUpColor: "#1A6B4A",
-      borderDownColor: "#B83232",
-      wickUpColor: "#1A6B4A",
-      wickDownColor: "#B83232",
+      upColor,
+      downColor,
+      borderUpColor: upColor,
+      borderDownColor: downColor,
+      wickUpColor: upColor,
+      wickDownColor: downColor,
       priceScaleId: "right",
     });
     candleSeries.priceScale().applyOptions({
@@ -125,6 +131,17 @@ export function CandlestickChart({
     if (!candleSeriesRef.current || !volumeSeriesRef.current) return;
     if (candles.length === 0) return;
 
+    // Same theme-dependent palette as the candle series above (re-read here
+    // since this effect runs independently of the chart-creation effect).
+    const isDark =
+      document.documentElement.getAttribute("data-theme") === "dark";
+    const upVolumeColor = isDark
+      ? "rgba(74, 232, 145, 0.4)"
+      : "rgba(26, 107, 74, 0.4)";
+    const downVolumeColor = isDark
+      ? "rgba(240, 107, 107, 0.4)"
+      : "rgba(184, 50, 50, 0.4)";
+
     const candleData: CandlestickData[] = candles.map((c) => ({
       time: toUnixTime(c.time),
       open: c.open,
@@ -136,8 +153,7 @@ export function CandlestickChart({
     const volumeData: HistogramData[] = candles.map((c) => ({
       time: toUnixTime(c.time),
       value: c.volume,
-      color:
-        c.close >= c.open ? "rgba(26, 107, 74, 0.4)" : "rgba(184, 50, 50, 0.4)",
+      color: c.close >= c.open ? upVolumeColor : downVolumeColor,
     }));
 
     candleSeriesRef.current.setData(candleData);
@@ -145,5 +161,31 @@ export function CandlestickChart({
     chartRef.current?.timeScale().fitContent();
   }, [candles]);
 
-  return <div ref={containerRef} style={{ width: "100%" }} />;
+  return (
+    <div style={{ position: "relative", width: "100%" }}>
+      <div
+        ref={containerRef}
+        role="img"
+        aria-label="Candlestick price and volume chart"
+        style={{ width: "100%" }}
+      />
+      {candles.length === 0 && (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontFamily: "var(--font-mono)",
+            fontSize: "12px",
+            color: "var(--text-tertiary)",
+            pointerEvents: "none",
+          }}
+        >
+          No chart data available
+        </div>
+      )}
+    </div>
+  );
 }

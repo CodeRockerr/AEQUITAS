@@ -40,7 +40,7 @@ export default function ThesesPage() {
     s === "bullish" ? "green" : s === "bearish" ? "red" : "amber";
 
   // Derive a real, data-driven Observed/Why/Next summary rather than
-  // static text — this surfaces the same kind of contradiction the
+  // static text: this surfaces the same kind of contradiction the
   // critic agent itself checks for, visually, before the prose wall.
   function buildInsight(r: ResearchResponse) {
     const noticed = `${
@@ -49,17 +49,17 @@ export default function ThesesPage() {
         : r.thesis_sentiment === "bearish"
           ? "Bearish"
           : "Mixed"
-    } thesis on ${r.ticker} — regime is ${r.current_regime}, momentum score ${r.signal_score.toFixed(2)}`;
+    } thesis on ${r.ticker}, regime is ${r.current_regime}, momentum score ${r.signal_score.toFixed(2)}`;
 
     let whyItMatters: string;
     const regimeBullish = r.current_regime === "Bull";
     const regimeBearish = r.current_regime === "Bear";
     if (r.signal_score > 0.2 && regimeBearish) {
       whyItMatters =
-        "Bullish momentum contradicts a Bear regime — worth scrutiny before acting.";
+        "Bullish momentum contradicts a Bear regime, worth scrutiny before acting.";
     } else if (r.signal_score < -0.2 && regimeBullish) {
       whyItMatters =
-        "Bearish momentum contradicts a Bull regime — worth scrutiny before acting.";
+        "Bearish momentum contradicts a Bull regime, worth scrutiny before acting.";
     } else if (r.revision_count > 1) {
       whyItMatters =
         "The critic requested a revision before approving this thesis.";
@@ -70,8 +70,8 @@ export default function ThesesPage() {
 
     const nextAction =
       r.confidence_score > 0.7
-        ? "High confidence — review the full Bull/Bear case below."
-        : "Moderate confidence — cross-check the Quant Evidence tab before acting.";
+        ? "High confidence: review the full Bull/Bear case below."
+        : "Moderate confidence: cross-check the Quant Evidence tab before acting.";
 
     return { noticed, whyItMatters, nextAction };
   }
@@ -219,11 +219,12 @@ export default function ThesesPage() {
               />
             </div>
 
-            {/* Insight strip — Observed / Why it matters / Next action */}
+            {/* Insight strip: Observed / Why it matters / Next action */}
             <InsightStrip {...buildInsight(result)} />
 
             {/* Tabs */}
             <div
+              role="tablist"
               style={{
                 display: "flex",
                 gap: "2px",
@@ -238,6 +239,10 @@ export default function ThesesPage() {
               ].map((tab) => (
                 <button
                   key={tab.id}
+                  id={`tab-${tab.id}`}
+                  role="tab"
+                  aria-selected={activeTab === tab.id}
+                  aria-controls={`panel-${tab.id}`}
                   onClick={() => setActiveTab(tab.id as typeof activeTab)}
                   style={{
                     fontFamily: "var(--font-mono)",
@@ -267,11 +272,10 @@ export default function ThesesPage() {
             {/* Thesis tab */}
             {activeTab === "thesis" && (
               <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 280px",
-                  gap: "16px",
-                }}
+                id="panel-thesis"
+                role="tabpanel"
+                aria-labelledby="tab-thesis"
+                className="thesis-layout-grid"
               >
                 <div
                   className="card animate-fade-in"
@@ -286,7 +290,7 @@ export default function ThesesPage() {
                       letterSpacing: "-0.01em",
                     }}
                   >
-                    {ticker} — Investment Thesis
+                    {result.ticker}: Investment Thesis
                   </div>
                   <div
                     style={{
@@ -444,7 +448,7 @@ export default function ThesesPage() {
                             lineHeight: "1.6",
                           }}
                         >
-                          — {e}
+                          • {e}
                         </div>
                       ))}
                     </div>
@@ -456,6 +460,9 @@ export default function ThesesPage() {
             {/* Critique tab */}
             {activeTab === "critique" && (
               <div
+                id="panel-critique"
+                role="tabpanel"
+                aria-labelledby="tab-critique"
                 className="card animate-fade-in"
                 style={{ padding: "32px", maxWidth: "720px" }}
               >
@@ -497,12 +504,10 @@ export default function ThesesPage() {
             {/* Quant evidence tab */}
             {activeTab === "quant" && (
               <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: "16px",
-                  maxWidth: "720px",
-                }}
+                id="panel-quant"
+                role="tabpanel"
+                aria-labelledby="tab-quant"
+                className="quant-evidence-grid"
               >
                 <div
                   className="card animate-fade-in"
@@ -657,7 +662,11 @@ export default function ThesesPage() {
                         <div
                           style={{
                             height: "100%",
-                            width: `${(d.magnitude / result.top_shap_drivers[0].magnitude) * 100}%`,
+                            width: `${
+                              (d.magnitude /
+                                (result.top_shap_drivers[0].magnitude || 1)) *
+                              100
+                            }%`,
                             background:
                               d.shap_value >= 0
                                 ? "var(--accent-green)"

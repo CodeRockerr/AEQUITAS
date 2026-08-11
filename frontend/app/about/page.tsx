@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { SITE_STATS } from "@/lib/site-stats";
 
 const TECH_STACK = [
   {
@@ -63,15 +64,15 @@ const PIPELINE = [
   {
     step: "06",
     title: "Trade Thesis",
-    desc: "Structured investment thesis grounded in real filings, quantitative signals, and ML evidence — with citations.",
+    desc: "Structured investment thesis grounded in real filings, quantitative signals, and ML evidence, with citations.",
   },
 ];
 
 const METRICS = [
-  { value: "87", label: "Unit Tests" },
-  { value: "12", label: "Algorithms" },
-  { value: "4", label: "Agent Nodes" },
-  { value: "6", label: "API Routers" },
+  { value: SITE_STATS.unitTests, label: "Unit Tests" },
+  { value: SITE_STATS.algorithms, label: "Algorithms" },
+  { value: SITE_STATS.agentNodes, label: "Agent Nodes" },
+  { value: SITE_STATS.apiRouters, label: "API Routers" },
 ];
 
 export default function AboutPage() {
@@ -122,7 +123,7 @@ export default function AboutPage() {
                 textTransform: "uppercase",
               }}
             >
-              v0.7.0 · Open Source
+              {SITE_STATS.version} · Open Source
             </span>
           </div>
 
@@ -154,7 +155,7 @@ export default function AboutPage() {
           >
             AEQUITAS is a full-stack agentic quantitative research platform that
             combines financial algorithms, ML models, and LLM reasoning to
-            generate institutional-grade investment theses — automatically.
+            generate institutional-grade investment theses, automatically.
           </p>
 
           <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
@@ -182,7 +183,7 @@ export default function AboutPage() {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(4, 1fr)",
+          gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
           borderBottom: "1px solid var(--border-subtle)",
         }}
       >
@@ -261,7 +262,7 @@ export default function AboutPage() {
               {
                 icon: "◫",
                 title: "Real financial algorithms",
-                desc: "12 production-grade algorithms: Black-Scholes + Greeks, VaR/CVaR (3 methods), mean-variance portfolio optimisation, pairs trading with Kalman filter hedge ratios.",
+                desc: "13 production-grade algorithms: Black-Scholes + Greeks, VaR/CVaR (3 methods), mean-variance portfolio optimisation, pairs trading with Kalman filter hedge ratios.",
               },
               {
                 icon: "◧",
@@ -592,7 +593,7 @@ export default function AboutPage() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "1fr 1fr",
+            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
             gap: "16px",
             marginBottom: "72px",
           }}
@@ -705,7 +706,7 @@ export default function AboutPage() {
                 }}
               >
                 <span style={{ color: "var(--text-tertiary)" }}>Version</span>
-                <span>v0.7.0</span>
+                <span>{SITE_STATS.version}</span>
               </div>
               <div
                 style={{

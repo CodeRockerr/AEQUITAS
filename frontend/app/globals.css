@@ -49,7 +49,7 @@
 
   --text-primary:   #18170F;
   --text-secondary: #5C5A52;
-  --text-tertiary:  #9B9890;
+  --text-tertiary:  #6B6860;
   --text-inverse:   #F7F6F2;
 
   --accent-green:   #1A6B4A;
@@ -81,7 +81,7 @@
 
   --text-primary:   #F0EFE7;
   --text-secondary: #8C8B82;
-  --text-tertiary:  #5C5B54;
+  --text-tertiary:  #86847A;
   --text-inverse:   #0C0C0A;
 
   --accent-green:   #4AE891;
@@ -96,6 +96,26 @@
   --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
   --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
   --shadow-lg: 0 12px 32px rgba(0,0,0,0.5);
+}
+
+/* ── Skip link ────────────────────────────────────────────── */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 10000;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  padding: 10px 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-default);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.skip-link:focus {
+  left: 12px;
+  top: 12px;
 }
 
 /* ── Base styles ──────────────────────────────────────────── */
@@ -165,6 +185,23 @@ body::before {
   100% { transform: translateX(-50%); }
 }
 
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-up,
+  .animate-fade-in {
+    animation: none;
+  }
+
+  .live-dot,
+  .ticker-inner {
+    animation-duration: 0.01ms;
+    animation-iteration-count: 1;
+  }
+}
+
 .animate-fade-up {
   animation: fadeUp var(--duration-slow) var(--ease-out) both;
 }
@@ -232,6 +269,25 @@ body::before {
   color: var(--text-secondary);
   background: var(--bg-elevated);
   border-color: var(--border-default);
+}
+
+/* ── Sidebar nav link ─────────────────────────────────────── */
+/* Plain CSS :hover instead of JS onMouseEnter/onMouseLeave DOM mutation:
+   the browser's native hover state can never desync from the pointer
+   (unlike a manually-set inline style, which can get stuck if a
+   mouseleave event is missed, e.g. touch-drag-to-scroll starting on the
+   element, or if a re-render leaves a same-valued style prop untouched). */
+.nav-link {
+  background: transparent;
+}
+
+.nav-link:hover {
+  background: var(--bg-elevated);
+}
+
+.nav-link.nav-link-active,
+.nav-link.nav-link-active:hover {
+  background: var(--bg-elevated);
 }
 
 /* ── Live dot ─────────────────────────────────────────────── */
@@ -325,7 +381,8 @@ body::before {
 }
 
 .input:focus {
-  border-color: var(--text-tertiary);
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-blue) 20%, transparent);
 }
 
 /* ── Button ───────────────────────────────────────────────── */
@@ -350,7 +407,12 @@ body::before {
   border-color: var(--text-primary);
 }
 
-.btn-primary:hover {
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.btn-primary:hover:not(:disabled) {
   opacity: 0.85;
   transform: translateY(-1px);
 }
@@ -361,8 +423,33 @@ body::before {
   border-color: var(--border-default);
 }
 
-.btn-ghost:hover {
+.btn-ghost:hover:not(:disabled) {
   border-color: var(--border-strong);
   color: var(--text-primary);
   background: var(--bg-elevated);
+}
+
+/* ── Responsive layout grids (theses page) ───────────────────
+   Fixed-px grid tracks can't be overridden by a media query when
+   set via inline style (inline styles win the cascade), so these
+   are pulled into real classes to collapse to one column on narrow
+   viewports. */
+.thesis-layout-grid {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 16px;
+}
+
+.quant-evidence-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  max-width: 720px;
+}
+
+@media (max-width: 640px) {
+  .thesis-layout-grid,
+  .quant-evidence-grid {
+    grid-template-columns: 1fr;
+  }
 }

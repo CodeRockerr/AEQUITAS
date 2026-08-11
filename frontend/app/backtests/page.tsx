@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCard } from "@/components/ui/StatCard";
 import { Spinner } from "@/components/ui/Spinner";
@@ -71,7 +71,14 @@ export default function BacktestsPage() {
     }
   }
 
-  const equityCurve = result ? buildEquityCurve(result) : [];
+  // buildEquityCurve uses Math.random() internally, so it must be memoized
+  // on `result` rather than recomputed on every render; otherwise clicking
+  // a ticker/strategy pill (without re-running) regenerates the noise and
+  // the plotted curve visibly changes shape for the same displayed result.
+  const equityCurve = useMemo(
+    () => (result ? buildEquityCurve(result) : []),
+    [result],
+  );
   const alphaPositive = result && result.alpha_pct >= 0;
 
   return (
@@ -88,19 +95,12 @@ export default function BacktestsPage() {
           className="card"
           style={{ padding: "20px 24px", marginBottom: "24px" }}
         >
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "auto 1fr auto",
-              gap: "20px",
-              alignItems: "end",
-            }}
-          >
+          <div className="grid grid-cols-1 gap-5 items-end md:grid-cols-[auto_1fr_auto]">
             <div>
               <div className="stat-label" style={{ marginBottom: "8px" }}>
                 Ticker
               </div>
-              <div style={{ display: "flex", gap: "6px" }}>
+              <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
                 {TICKERS.map((t) => (
                   <button
                     key={t}
@@ -131,7 +131,7 @@ export default function BacktestsPage() {
               <div className="stat-label" style={{ marginBottom: "8px" }}>
                 Strategy
               </div>
-              <div style={{ display: "flex", gap: "6px" }}>
+              <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
                 {STRATEGIES.map((s) => (
                   <button
                     key={s.id}
@@ -201,7 +201,30 @@ export default function BacktestsPage() {
           </div>
         )}
 
-        {result && (
+        {loading && (
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              padding: "60px 0",
+              gap: "12px",
+            }}
+          >
+            <Spinner size={24} />
+            <div
+              style={{
+                fontFamily: "var(--font-mono)",
+                fontSize: "12px",
+                color: "var(--text-tertiary)",
+              }}
+            >
+              Running backtest for {ticker}...
+            </div>
+          </div>
+        )}
+
+        {result && !loading && (
           <>
             {/* Stats */}
             <div

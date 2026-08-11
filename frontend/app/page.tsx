@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { healthApi } from "@/lib/api";
 import { usePriceStream } from "@/hooks/usePriceStream";
+import { SITE_STATS } from "@/lib/site-stats";
 
 const TICKER_LIST = [
   "AAPL",
@@ -22,7 +23,7 @@ export default function HomePage() {
   const [status, setStatus] = useState<"checking" | "online" | "offline">(
     "checking",
   );
-  const [version, setVersion] = useState("—");
+  const [version, setVersion] = useState("...");
   const { prices, subscribe, unsubscribe, connected } = usePriceStream();
 
   useEffect(() => {
@@ -78,7 +79,9 @@ export default function HomePage() {
                     : "var(--accent-red)",
               }}
             >
-              {live.changePct >= 0 ? "▲" : "▼"}
+              <span aria-hidden="true">
+                {live.changePct >= 0 ? "▲" : "▼"}
+              </span>
               {Math.abs(live.changePct).toFixed(2)}%
             </span>
             {!live.isLive && (
@@ -95,7 +98,7 @@ export default function HomePage() {
             )}
           </>
         ) : (
-          <span style={{ color: "var(--border-strong)" }}>—</span>
+          <span style={{ color: "var(--border-strong)" }}>-</span>
         )}
       </span>
     );
@@ -173,6 +176,7 @@ export default function HomePage() {
               }}
             />
             <span
+              aria-live="polite"
               style={{
                 fontFamily: "var(--font-mono)",
                 fontSize: "10px",
@@ -220,8 +224,8 @@ export default function HomePage() {
             }}
           >
             AEQUITAS combines financial algorithms, ML models, and agentic AI to
-            generate structured investment theses grounded in real data — in
-            seconds.
+            generate structured investment theses grounded in real data,
+            delivered in seconds.
           </p>
 
           <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
@@ -250,7 +254,7 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Ticker tape — real WebSocket-pushed prices, refreshed every ~12s */}
+      {/* Ticker tape: real WebSocket-pushed prices, refreshed every ~12s */}
       <div
         className="ticker-wrap"
         style={{ padding: "8px 0", background: "var(--bg-elevated)" }}
@@ -288,13 +292,6 @@ export default function HomePage() {
                   padding: "22px",
                   cursor: "pointer",
                   animationDelay: `${i * 60}ms`,
-                }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLElement).style.borderColor =
-                    "var(--border-strong)";
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLElement).style.borderColor = "";
                 }}
               >
                 <div
@@ -364,12 +361,12 @@ export default function HomePage() {
           }}
         >
           {[
-            { v: "121", l: "Unit Tests" },
-            { v: "13", l: "Algorithms" },
-            { v: "4", l: "Agent Nodes" },
-            { v: "3", l: "ML Models" },
-            { v: "7", l: "API Routers" },
-            { v: "v0.9", l: "Version" },
+            { v: SITE_STATS.unitTests, l: "Unit Tests" },
+            { v: SITE_STATS.algorithms, l: "Algorithms" },
+            { v: SITE_STATS.agentNodes, l: "Agent Nodes" },
+            { v: SITE_STATS.mlModels, l: "ML Models" },
+            { v: SITE_STATS.apiRouters, l: "API Routers" },
+            { v: SITE_STATS.version, l: "Version" },
           ].map(({ v, l }) => (
             <div
               key={l}

@@ -5,10 +5,10 @@ interface InsightStripProps {
 }
 
 /**
- * AEQUITAS — Structured agent insight summary.
+ * AEQUITAS: Structured agent insight summary.
  *
  * Research backing ("explainable guidance" pattern): users trust AI
- * output faster when three things are made explicit — what the
+ * output faster when three things are made explicit: what the
  * system noticed, why it matters, and what to do next. This sits
  * above the full prose output as a scannable summary; the full
  * narrative remains available below for anyone who wants depth.

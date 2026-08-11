@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCard } from "@/components/ui/StatCard";
 import { Badge } from "@/components/ui/Badge";
@@ -40,7 +40,14 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [chartError, setChartError] = useState<string | null>(null);
 
+  // Monotonic request counters so a slow response for an old ticker can't
+  // clobber state after a newer request has already resolved (rapid ticker
+  // switching / range changes would otherwise race).
+  const loadReqId = useRef(0);
+  const historyReqId = useRef(0);
+
   async function load(t: string) {
+    const reqId = ++loadReqId.current;
     setLoading(true);
     setError(null);
     try {
@@ -49,29 +56,34 @@ export default function DashboardPage() {
         mlApi.regime(t),
         mlApi.forecast(t),
       ]);
+      if (reqId !== loadReqId.current) return; // superseded by a newer request
       setSignals(sig);
       setRegime(reg);
       setForecast(fore);
     } catch (e) {
+      if (reqId !== loadReqId.current) return;
       setError(e instanceof Error ? e.message : "Failed to load data");
     } finally {
-      setLoading(false);
+      if (reqId === loadReqId.current) setLoading(false);
     }
   }
 
   async function loadHistory(t: string, r: typeof range) {
+    const reqId = ++historyReqId.current;
     setChartLoading(true);
     setChartError(null);
     try {
       const h = await historyApi.get(t, r);
+      if (reqId !== historyReqId.current) return; // superseded by a newer request
       setHistory(h);
     } catch (e) {
+      if (reqId !== historyReqId.current) return;
       setChartError(
         e instanceof Error ? e.message : "Failed to load price history",
       );
       setHistory(null);
     } finally {
-      setChartLoading(false);
+      if (reqId === historyReqId.current) setChartLoading(false);
     }
   }
 
@@ -103,6 +115,18 @@ export default function DashboardPage() {
         : r === "High Volatility"
           ? "amber"
           : "neutral";
+
+  // Explicit color per known regime label, plus a distinct fallback for any
+  // label the HMM might emit that isn't one of the three we render a legend
+  // for, so an unrecognized regime never silently renders identically to
+  // "High Volatility".
+  const REGIME_COLORS: Record<string, string> = {
+    Bull: "var(--accent-green)",
+    Bear: "var(--accent-red)",
+    "High Volatility": "var(--accent-amber)",
+  };
+  const REGIME_FALLBACK_COLOR = "var(--text-tertiary)";
+  const regimeColor = (r: string) => REGIME_COLORS[r] ?? REGIME_FALLBACK_COLOR;
 
   return (
     <div style={{ minHeight: "100vh" }}>
@@ -280,7 +304,7 @@ export default function DashboardPage() {
               marginBottom: "24px",
             }}
           >
-            {error} — Make sure {ticker} is a valid ticker symbol.
+            {error}. Make sure {ticker} is a valid ticker symbol.
           </div>
         )}
 
@@ -316,7 +340,7 @@ export default function DashboardPage() {
             >
               <StatCard
                 label="Regime"
-                value={regime?.current_regime ?? "—"}
+                value={regime?.current_regime ?? "N/A"}
                 sub={
                   regime
                     ? `${(regime.current_regime_prob * 100).toFixed(0)}% confidence`
@@ -329,7 +353,7 @@ export default function DashboardPage() {
               />
               <StatCard
                 label="Signal"
-                value={signals ? signals.direction.toUpperCase() : "—"}
+                value={signals ? signals.direction.toUpperCase() : "N/A"}
                 sub={
                   signals
                     ? `Score: ${signals.combined_signal.toFixed(3)}`
@@ -342,7 +366,7 @@ export default function DashboardPage() {
               />
               <StatCard
                 label="ML Forecast"
-                value={forecast?.predicted_return_pct ?? "—"}
+                value={forecast?.predicted_return_pct ?? "N/A"}
                 sub={
                   forecast
                     ? `${forecast.direction} · ${(forecast.confidence * 100).toFixed(0)}% conf`
@@ -359,7 +383,7 @@ export default function DashboardPage() {
               />
               <StatCard
                 label="Dir. Accuracy"
-                value={forecast?.model_metrics.directional_accuracy ?? "—"}
+                value={forecast?.model_metrics.directional_accuracy ?? "N/A"}
                 sub="XGBoost model"
                 delay={180}
               />
@@ -368,7 +392,7 @@ export default function DashboardPage() {
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "1fr 1fr",
+                gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
                 gap: "16px",
                 marginBottom: "16px",
               }}
@@ -418,6 +442,7 @@ export default function DashboardPage() {
                           {name}
                         </div>
                         <div
+                          title={signal.note}
                           style={{
                             fontFamily: "var(--font-mono)",
                             fontSize: "10px",
@@ -638,12 +663,7 @@ export default function DashboardPage() {
                         width: "12px",
                         height: "24px",
                         borderRadius: "2px",
-                        background:
-                          r === "Bull"
-                            ? "var(--accent-green)"
-                            : r === "Bear"
-                              ? "var(--accent-red)"
-                              : "var(--accent-amber)",
+                        background: regimeColor(r),
                         opacity: 0.7,
                         flexShrink: 0,
                       }}
@@ -658,6 +678,9 @@ export default function DashboardPage() {
                     { label: "Bull", color: "var(--accent-green)" },
                     { label: "Bear", color: "var(--accent-red)" },
                     { label: "High Vol", color: "var(--accent-amber)" },
+                    ...(regime.regime_sequence.some((r) => !REGIME_COLORS[r])
+                      ? [{ label: "Other", color: REGIME_FALLBACK_COLOR }]
+                      : []),
                   ].map(({ label, color }) => (
                     <div
                       key={label}

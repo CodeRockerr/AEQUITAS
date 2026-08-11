@@ -1,7 +1,7 @@
 interface BadgeProps {
   children: React.ReactNode;
   variant?: "green" | "red" | "amber" | "blue" | "neutral";
-  /** Show a directional glyph alongside color — set false only for
+  /** Show a directional glyph alongside color. Set false only for
    * badges where the text itself is already unambiguous without color
    * (e.g. a ticker symbol badge). Defaults to true for semantic badges. */
   showGlyph?: boolean;

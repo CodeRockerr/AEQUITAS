@@ -1,5 +1,5 @@
 """
-AEQUITAS — AI chat endpoint powered by Groq with tool use.
+AEQUITAS: AI chat endpoint powered by Groq with tool use.
 
 POST /api/v1/chat
 Request:  { "messages": [{"role": "user", "content": "..."}] }
@@ -22,23 +22,23 @@ groq_client = AsyncGroq(api_key=settings.groq_api_key)
 
 API_BASE = "http://localhost:8000"
 
-SYSTEM_PROMPT = """You are AEQUITAS Assistant — an AI analyst embedded in the AEQUITAS quantitative research platform.
+SYSTEM_PROMPT = """You are AEQUITAS Assistant, an AI analyst embedded in the AEQUITAS quantitative research platform.
 
 You have access to real financial data tools. When a user asks about a stock, market, or portfolio:
-1. ALWAYS call the relevant tools to get real data — never guess or hallucinate numbers
+1. ALWAYS call the relevant tools to get real data, never guess or hallucinate numbers
 2. Use multiple tools when needed for a complete picture
 3. Synthesize tool results into a clear, concise answer
-4. Be honest about uncertainty — if confidence is low, say so
+4. Be honest about uncertainty: if confidence is low, say so
 5. Keep answers focused and actionable
 
 You can analyze any valid stock ticker. Common ones: AAPL, MSFT, NVDA, TSLA, SPY, AMZN, META, GOOGL, JPM.
 Always ground your answers in tool data. Never make up prices, percentages, or signals.
 
 You get exactly ONE round of tool calls per user message. Once tool results come back, you must
-write a final plain-language answer using only those results — never attempt another tool call and
+write a final plain-language answer using only those results. Never attempt another tool call, and
 never output text formatted as a function/tool call (no JSON like {"function_name": ...}, no
 <function=...> tags). If a tool result shows an error or insufficient data (e.g. "Need N+ bars",
-"ingest data first", "insufficient price history"), you cannot fetch more data yourself — just tell
+"ingest data first", "insufficient price history"), you cannot fetch more data yourself. Just tell
 the user plainly that this ticker isn't cached yet and suggest one of the common tickers above."""
 
 TOOLS = [
@@ -361,7 +361,7 @@ async def execute_tool(name: str, args: dict) -> str:
                     f"{API_BASE}/api/v1/backtest/{args['ticker']}/{args['strategy']}",
                 )
                 return (
-                    f"Backtest — {args['strategy'].upper()} on {args['ticker']}:\n"
+                    f"Backtest: {args['strategy'].upper()} on {args['ticker']}:\n"
                     f"Return: {d['total_return_pct']:.2f}% | "
                     f"Sharpe: {d['sharpe_ratio']:.2f} | "
                     f"Max DD: {d['max_drawdown_pct']:.2f}%\n"
@@ -416,7 +416,7 @@ async def chat(req: ChatRequest) -> ChatResponse:
 
     tools_used: list[str] = []
 
-    # First call — let Groq pick tools
+    # First call: let Groq pick tools
     response = await groq_client.chat.completions.create(
         model=settings.groq_model,
         messages=cast(list[ChatCompletionMessageParam], messages),
@@ -447,7 +447,7 @@ async def chat(req: ChatRequest) -> ChatResponse:
             }
         )
 
-    # Second call — synthesize with results
+    # Second call: synthesize with results
     messages_with_tools: list[dict] = [
         *messages,
         {
