@@ -210,7 +210,7 @@ async def _call(client: httpx.AsyncClient, method: str, url: str, **kwargs) -> d
         except Exception:
             detail = r.text
         raise RuntimeError(str(detail))
-    return r.json()
+    return cast(dict, r.json())
 
 
 async def execute_tool(name: str, args: dict) -> str:
