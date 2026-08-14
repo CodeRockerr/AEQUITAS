@@ -1,10 +1,10 @@
 "use client";
 
 /**
- * AEQUITAS — AI Chat Widget
+ * AEQUITAS: AI Chat Widget
  *
  * Floating chat button on every page. Powered by Groq (free tier)
- * with tool use — calls your real AEQUITAS endpoints to answer
+ * with tool use, calling your real AEQUITAS endpoints to answer
  * questions with actual data, not hallucinated numbers.
  */
 
@@ -47,7 +47,7 @@ export function ChatWidget() {
     {
       role: "assistant",
       content:
-        "Hi — I'm the AEQUITAS AI analyst. Ask me anything about a stock, portfolio, or market. I'll call the real algorithms to answer with actual data.",
+        "Hi, I'm the AEQUITAS AI analyst. Ask me anything about a stock, portfolio, or market. I'll call the real algorithms to answer with actual data.",
     },
   ]);
   const [input, setInput] = useState("");
@@ -126,7 +126,7 @@ export function ChatWidget() {
         {
           role: "assistant",
           content:
-            "Sorry — something went wrong. The API might still be starting up. Try again in a moment.",
+            "Sorry, something went wrong. The API might still be starting up. Try again in a moment.",
         },
       ]);
     } finally {
@@ -204,7 +204,7 @@ export function ChatWidget() {
               lineHeight: 1.5,
             }}
           >
-            👋 Ask me anything about a stock, portfolio, or the market — I&apos;ll
+            👋 Ask me anything about a stock, portfolio, or the market. I&apos;ll
             pull real data to answer.
           </div>
         </div>

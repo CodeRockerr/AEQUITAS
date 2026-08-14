@@ -26,11 +26,16 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body>
+        <a href="#main-content" className="skip-link">
+          Skip to content
+        </a>
         <ThemeProvider>
           <LoadingProvider>
             <div style={{ display: "flex", minHeight: "100vh" }}>
               <Sidebar />
-              <main style={{ flex: 1, overflow: "auto" }}>{children}</main>
+              <main id="main-content" style={{ flex: 1, overflow: "auto" }}>
+                {children}
+              </main>
             </div>
             <ChatWidget />
           </LoadingProvider>

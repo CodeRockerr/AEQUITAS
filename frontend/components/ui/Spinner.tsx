@@ -7,7 +7,6 @@ export function Spinner({ size = 16 }: { size?: number }) {
       fill="none"
       style={{ animation: "spin 0.8s linear infinite" }}
     >
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       <circle
         cx="12"
         cy="12"

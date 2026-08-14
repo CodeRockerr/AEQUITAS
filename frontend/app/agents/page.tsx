@@ -21,6 +21,27 @@ const TABS = [
   { id: "portfolio", label: "Portfolio Construction" },
 ] as const;
 
+// Hoisted to module scope so these arrays keep a stable reference across
+// renders. AgentProgress restarts its step timers whenever its `steps`
+// prop identity changes, so a fresh literal on every render would reset
+// the indicator any time the parent re-renders while a request is loading.
+const NEWS_PROGRESS_STEPS = [
+  "Fetching recent headlines from Finnhub",
+  "Scoring sentiment with LLM",
+  "Comparing against prior period trend",
+];
+const EARNINGS_PROGRESS_STEPS = [
+  "Fetching earnings calendar from Finnhub",
+  "Pulling key fundamentals",
+  "Synthesising earnings analysis with LLM",
+];
+const PORTFOLIO_PROGRESS_STEPS = [
+  "Fetching price history for all tickers",
+  "Running mean-variance optimisation",
+  "Testing pairs for cointegration",
+  "Generating portfolio thesis with LLM",
+];
+
 export default function AgentsPage() {
   const [activeTab, setActiveTab] =
     useState<(typeof TABS)[number]["id"]>("news");
@@ -117,12 +138,12 @@ export default function AgentsPage() {
     let whyItMatters: string;
     if (r.trend === "worsening" && r.sentiment !== "bearish") {
       whyItMatters =
-        "Sentiment is still net-positive but worsening — an early signal worth watching.";
+        "Sentiment is still net-positive but worsening, an early signal worth watching.";
     } else if (r.trend === "improving" && r.sentiment !== "bullish") {
       whyItMatters =
-        "Sentiment is improving even though not yet bullish — momentum may be building.";
+        "Sentiment is improving even though not yet bullish, so momentum may be building.";
     } else {
-      whyItMatters = `Sentiment and trend are aligned — ${r.confidence >= 0.7 ? "high" : "moderate"} confidence read.`;
+      whyItMatters = `Sentiment and trend are aligned, a ${r.confidence >= 0.7 ? "high" : "moderate"} confidence read.`;
     }
     const nextAction =
       r.key_themes.length > 0
@@ -138,16 +159,16 @@ export default function AgentsPage() {
     const noticed = `Max-Sharpe portfolio: ${(r.max_sharpe_return * 100).toFixed(1)}% expected return, Sharpe ${r.max_sharpe_ratio.toFixed(2)}`;
     let whyItMatters: string;
     if (topHolding && topHolding.max_sharpe_weight > 0.6) {
-      whyItMatters = `Concentrated in ${topHolding.ticker} (${(topHolding.max_sharpe_weight * 100).toFixed(0)}%) — limited diversification benefit.`;
+      whyItMatters = `Concentrated in ${topHolding.ticker} (${(topHolding.max_sharpe_weight * 100).toFixed(0)}%), which limits the diversification benefit.`;
     } else if (r.cointegrated_pairs.length > 0) {
-      whyItMatters = `${r.cointegrated_pairs.length} cointegrated pair(s) found — a pairs-trade overlay may add uncorrelated return.`;
+      whyItMatters = `${r.cointegrated_pairs.length} cointegrated pair(s) found, so a pairs-trade overlay may add uncorrelated return.`;
     } else {
       whyItMatters =
         "Allocation is reasonably diversified across the requested tickers.";
     }
     const nextAction =
       r.max_sharpe_vol > 0.25
-        ? "High volatility — consider the Min-Variance allocation if risk tolerance is lower."
+        ? "High volatility: consider the Min-Variance allocation if risk tolerance is lower."
         : "Review the full thesis below before committing capital.";
     return { noticed, whyItMatters, nextAction };
   }
@@ -205,19 +226,12 @@ export default function AgentsPage() {
               className="card"
               style={{ padding: "20px 24px", marginBottom: "24px" }}
             >
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "auto 1fr auto",
-                  gap: "16px",
-                  alignItems: "end",
-                }}
-              >
+              <div className="grid grid-cols-1 gap-4 items-end md:grid-cols-[auto_1fr_auto]">
                 <div>
                   <div className="stat-label" style={{ marginBottom: "6px" }}>
                     Ticker
                   </div>
-                  <div style={{ display: "flex", gap: "4px" }}>
+                  <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
                     {TICKERS.map((t) => (
                       <button
                         key={t}
@@ -273,14 +287,7 @@ export default function AgentsPage() {
                 }}
               >
                 <Spinner size={24} />
-                <AgentProgress
-                  steps={[
-                    "Fetching recent headlines from Finnhub",
-                    "Scoring sentiment with LLM",
-                    "Comparing against prior period trend",
-                  ]}
-                  msPerStep={2500}
-                />
+                <AgentProgress steps={NEWS_PROGRESS_STEPS} msPerStep={2500} />
               </div>
             )}
 
@@ -345,13 +352,7 @@ export default function AgentsPage() {
 
                 <InsightStrip {...buildNewsInsight(newsResult)} />
 
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 280px",
-                    gap: "16px",
-                  }}
-                >
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_280px]">
                   <div
                     className="card animate-fade-in"
                     style={{ padding: "28px" }}
@@ -364,7 +365,7 @@ export default function AgentsPage() {
                         marginBottom: "16px",
                       }}
                     >
-                      {newsResult.ticker} — News Sentiment Summary
+                      {newsResult.ticker} · News Sentiment Summary
                     </div>
                     <div
                       style={{
@@ -502,19 +503,12 @@ export default function AgentsPage() {
               className="card"
               style={{ padding: "20px 24px", marginBottom: "24px" }}
             >
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "auto 1fr auto",
-                  gap: "16px",
-                  alignItems: "end",
-                }}
-              >
+              <div className="grid grid-cols-1 gap-4 items-end md:grid-cols-[auto_1fr_auto]">
                 <div>
                   <div className="stat-label" style={{ marginBottom: "6px" }}>
                     Ticker
                   </div>
-                  <div style={{ display: "flex", gap: "4px" }}>
+                  <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
                     {TICKERS.map((t) => (
                       <button
                         key={t}
@@ -571,11 +565,7 @@ export default function AgentsPage() {
               >
                 <Spinner size={24} />
                 <AgentProgress
-                  steps={[
-                    "Fetching earnings calendar from Finnhub",
-                    "Pulling key fundamentals",
-                    "Synthesising earnings analysis with LLM",
-                  ]}
+                  steps={EARNINGS_PROGRESS_STEPS}
                   msPerStep={2500}
                 />
               </div>
@@ -657,8 +647,8 @@ export default function AgentsPage() {
                     }}
                   >
                     No historical EPS beat/miss data available from Finnhub for
-                    this ticker — analysis below is grounded in recent news and
-                    fundamentals instead.
+                    this ticker, so the analysis below is grounded in recent
+                    news and fundamentals instead.
                   </div>
                 )}
 
@@ -666,21 +656,15 @@ export default function AgentsPage() {
                   noticed={`Next earnings: ${earningsResult.next_earnings_date ?? "not scheduled"} · guidance reads ${earningsResult.guidance_sentiment}`}
                   whyItMatters={
                     earningsResult.last_earnings_beat === false
-                      ? "Last quarter missed estimates — watch for a pattern before the next print."
+                      ? "Last quarter missed estimates. Watch for a pattern before the next print."
                       : earningsResult.last_earnings_beat === true
-                        ? "Last quarter beat estimates — a continuation would be a positive signal."
-                        : "No recent beat/miss history available — lean on fundamentals and news for context."
+                        ? "Last quarter beat estimates. A continuation would be a positive signal."
+                        : "No recent beat/miss history available. Lean on fundamentals and news for context."
                   }
                   nextAction="Review the full analysis below, then cross-check against the News Sentiment tab."
                 />
 
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 280px",
-                    gap: "16px",
-                  }}
-                >
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_280px]">
                   <div
                     className="card animate-fade-in"
                     style={{ padding: "28px" }}
@@ -693,7 +677,7 @@ export default function AgentsPage() {
                         marginBottom: "16px",
                       }}
                     >
-                      {earningsResult.ticker} — Earnings Analysis
+                      {earningsResult.ticker} · Earnings Analysis
                     </div>
                     <div
                       style={{
@@ -874,20 +858,14 @@ export default function AgentsPage() {
               className="card"
               style={{ padding: "20px 24px", marginBottom: "24px" }}
             >
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr auto",
-                  gap: "16px",
-                  alignItems: "end",
-                }}
-              >
+              <div className="grid grid-cols-1 gap-4 items-end md:grid-cols-[1fr_auto]">
                 <div>
                   <div className="stat-label" style={{ marginBottom: "6px" }}>
                     Tickers (comma-separated, 2-10)
                   </div>
                   <input
                     className="input"
+                    aria-label="Tickers (comma-separated, 2 to 10)"
                     value={portfolioInput}
                     onChange={(e) => setPortfolioInput(e.target.value)}
                     placeholder="AAPL, MSFT, NVDA"
@@ -921,12 +899,7 @@ export default function AgentsPage() {
               >
                 <Spinner size={24} />
                 <AgentProgress
-                  steps={[
-                    "Fetching price history for all tickers",
-                    "Running mean-variance optimisation",
-                    "Testing pairs for cointegration",
-                    "Generating portfolio thesis with LLM",
-                  ]}
+                  steps={PORTFOLIO_PROGRESS_STEPS}
                   msPerStep={3000}
                 />
               </div>
@@ -993,9 +966,8 @@ export default function AgentsPage() {
                 <InsightStrip {...buildPortfolioInsight(portfolioResult)} />
 
                 <div
+                  className="grid grid-cols-1 md:grid-cols-2"
                   style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
                     gap: "16px",
                     marginBottom: "16px",
                   }}
@@ -1273,7 +1245,7 @@ export default function AgentsPage() {
                     }}
                   >
                     {portfolioResult.errors.map((e, i) => (
-                      <div key={i}>— {e}</div>
+                      <div key={i}>&bull; {e}</div>
                     ))}
                   </div>
                 )}

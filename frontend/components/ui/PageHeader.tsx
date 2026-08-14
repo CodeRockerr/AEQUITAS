@@ -17,12 +17,13 @@ export function PageHeader({
         padding: "32px 40px 24px",
         borderBottom: "1px solid var(--border-subtle)",
         display: "flex",
+        flexWrap: "wrap",
         alignItems: "flex-end",
         justifyContent: "space-between",
         gap: "16px",
       }}
     >
-      <div>
+      <div style={{ minWidth: 0 }}>
         <h1
           style={{
             fontFamily: serif ? "var(--font-serif)" : "var(--font-sans)",

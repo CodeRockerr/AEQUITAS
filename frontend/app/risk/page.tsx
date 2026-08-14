@@ -42,9 +42,13 @@ export default function RiskPage() {
   const [errorBS, setErrorBS] = useState<string | null>(null);
 
   async function runVar() {
-    setLoadingVar(true);
     setErrorVar(null);
     const pv = parseFloat(portfolioValue);
+    if (!Number.isFinite(pv) || pv <= 0) {
+      setErrorVar("Enter a valid portfolio value greater than 0");
+      return;
+    }
+    setLoadingVar(true);
     try {
       const results = await Promise.all(
         METHODS.map((m) =>
@@ -60,15 +64,36 @@ export default function RiskPage() {
   }
 
   async function runBS() {
-    setLoadingBS(true);
     setErrorBS(null);
+    const spotNum = parseFloat(spot);
+    const strikeNum = parseFloat(strike);
+    const rateNum = parseFloat(rate);
+    const volNum = parseFloat(vol);
+    const expiryNum = parseFloat(expiry);
+    if (
+      !Number.isFinite(spotNum) ||
+      spotNum <= 0 ||
+      !Number.isFinite(strikeNum) ||
+      strikeNum <= 0 ||
+      !Number.isFinite(volNum) ||
+      volNum <= 0 ||
+      !Number.isFinite(expiryNum) ||
+      expiryNum <= 0 ||
+      !Number.isFinite(rateNum)
+    ) {
+      setErrorBS(
+        "Enter valid numbers for all fields (spot, strike, volatility and expiry must be greater than 0)",
+      );
+      return;
+    }
+    setLoadingBS(true);
     try {
       const r = await pricingApi.blackScholes({
-        spot: parseFloat(spot),
-        strike: parseFloat(strike),
-        rate: parseFloat(rate),
-        volatility: parseFloat(vol),
-        expiry: parseFloat(expiry),
+        spot: spotNum,
+        strike: strikeNum,
+        rate: rateNum,
+        volatility: volNum,
+        expiry: expiryNum,
         option_type: optType,
       });
       setBsResult(r);
@@ -112,19 +137,12 @@ export default function RiskPage() {
           className="card"
           style={{ padding: "20px 24px", marginBottom: "24px" }}
         >
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "auto auto 1fr auto",
-              gap: "16px",
-              alignItems: "end",
-            }}
-          >
+          <div className="grid grid-cols-1 gap-4 items-end md:grid-cols-[auto_auto_1fr_auto]">
             <div>
               <div className="stat-label" style={{ marginBottom: "6px" }}>
                 Ticker
               </div>
-              <div style={{ display: "flex", gap: "4px" }}>
+              <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
                 {TICKERS.map((t) => (
                   <button
                     key={t}
@@ -156,6 +174,7 @@ export default function RiskPage() {
               </div>
               <input
                 className="input"
+                aria-label="Portfolio Value"
                 value={portfolioValue}
                 onChange={(e) => setPortfolioValue(e.target.value)}
                 style={{ width: "140px" }}
@@ -197,7 +216,31 @@ export default function RiskPage() {
           </div>
         )}
 
-        {Object.keys(varResults).length > 0 && (
+        {loadingVar && (
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              padding: "40px 0",
+              gap: "12px",
+              marginBottom: "24px",
+            }}
+          >
+            <Spinner size={20} />
+            <div
+              style={{
+                fontFamily: "var(--font-mono)",
+                fontSize: "11px",
+                color: "var(--text-tertiary)",
+              }}
+            >
+              Computing VaR for {ticker}...
+            </div>
+          </div>
+        )}
+
+        {Object.keys(varResults).length > 0 && !loadingVar && (
           <>
             {/* Stats row */}
             <div
@@ -245,9 +288,8 @@ export default function RiskPage() {
 
             {/* Chart + interpretation */}
             <div
+              className="grid grid-cols-1 md:grid-cols-2"
               style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
                 gap: "16px",
                 marginBottom: "32px",
               }}
@@ -414,13 +456,7 @@ export default function RiskPage() {
           Black-Scholes Options Pricer
         </div>
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: "16px",
-          }}
-        >
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="card" style={{ padding: "24px" }}>
             <div
               style={{
@@ -468,6 +504,7 @@ export default function RiskPage() {
                   </div>
                   <input
                     className="input"
+                    aria-label={label}
                     value={value}
                     onChange={(e) => set(e.target.value)}
                     placeholder={placeholder}
@@ -536,7 +573,7 @@ export default function RiskPage() {
             )}
           </div>
 
-          {bsResult ? (
+          {bsResult && !loadingBS ? (
             <div className="card animate-fade-in" style={{ padding: "24px" }}>
               <div
                 style={{
@@ -667,25 +704,43 @@ export default function RiskPage() {
                 justifyContent: "center",
               }}
             >
-              <div
-                style={{
-                  fontFamily: "var(--font-serif)",
-                  fontSize: "32px",
-                  color: "var(--text-tertiary)",
-                  marginBottom: "8px",
-                }}
-              >
-                ◬
-              </div>
-              <div
-                style={{
-                  fontFamily: "var(--font-mono)",
-                  fontSize: "11px",
-                  color: "var(--text-tertiary)",
-                }}
-              >
-                Enter parameters and price the option
-              </div>
+              {loadingBS ? (
+                <>
+                  <Spinner size={24} />
+                  <div
+                    style={{
+                      fontFamily: "var(--font-mono)",
+                      fontSize: "11px",
+                      color: "var(--text-tertiary)",
+                      marginTop: "12px",
+                    }}
+                  >
+                    Pricing option...
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div
+                    style={{
+                      fontFamily: "var(--font-serif)",
+                      fontSize: "32px",
+                      color: "var(--text-tertiary)",
+                      marginBottom: "8px",
+                    }}
+                  >
+                    ◬
+                  </div>
+                  <div
+                    style={{
+                      fontFamily: "var(--font-mono)",
+                      fontSize: "11px",
+                      color: "var(--text-tertiary)",
+                    }}
+                  >
+                    Enter parameters and price the option
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>

@@ -4,20 +4,20 @@ import { useEffect, useState } from "react";
 
 interface AgentProgressProps {
   steps: string[];
-  /** Approximate ms per step — used to advance the visual indicator
+  /** Approximate ms per step, used to advance the visual indicator
    * even though we can't get real progress events from a single
    * synchronous POST request. This is an honest approximation, not
-   * a fake progress bar — steps stay lit once "reached" and the
+   * a fake progress bar: steps stay lit once "reached" and the
    * final step pulses until the real response arrives. */
   msPerStep?: number;
 }
 
 /**
- * AEQUITAS — Agent pipeline progress indicator.
+ * AEQUITAS: Agent pipeline progress indicator.
  *
  * Shows which stage of a multi-step agent pipeline is likely running,
  * instead of a bare spinner. Research backing: silence during a long
- * wait erodes trust fastest — showing *what's happening* even
+ * wait erodes trust fastest, so showing *what's happening* even
  * approximately is far better than a generic loading state.
  */
 export function AgentProgress({ steps, msPerStep = 4000 }: AgentProgressProps) {

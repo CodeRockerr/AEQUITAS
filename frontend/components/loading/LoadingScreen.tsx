@@ -93,13 +93,23 @@ function TickerCatchGame({ onScore }: { onScore: (n: number) => void }) {
 
   useEffect(() => {
     if (over) return;
-    const raf = requestAnimationFrame(function tick() {
+    // `cancelled` is checked synchronously inside `tick` (unlike the `over`
+    // state, which is a stale closure here and would never reflect updates
+    // once this effect has run). Setting it in the cleanup guarantees the
+    // recursive rAF chain actually stops on unmount or when the game ends,
+    // instead of scheduling frames forever.
+    let cancelled = false;
+    let raf = requestAnimationFrame(function tick() {
+      if (cancelled) return;
       setTickers((prev) =>
         prev.map((t) => (t.caught ? t : { ...t, y: t.y - t.speed * 0.25 })),
       );
-      if (!over) requestAnimationFrame(tick);
+      raf = requestAnimationFrame(tick);
     });
-    return () => cancelAnimationFrame(raf);
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(raf);
+    };
   }, [over]);
 
   useEffect(() => {
@@ -279,12 +289,16 @@ function TickerCatchGame({ onScore }: { onScore: (n: number) => void }) {
 
 // ── Main loading screen ──────────────────────────────────────────────────────
 export function LoadingScreen({ onDismiss }: LoadingScreenProps) {
-  const [factIndex, setFactIndex] = useState(0);
+  // factIndex starts null (matches server output, avoiding a hydration
+  // mismatch from Math.random() running separately on server and client)
+  // and is picked once on mount. The typewriter gets "" until then, so it
+  // never flashes one fact and then resets into a different one.
+  const [factIndex, setFactIndex] = useState<number | null>(null);
   useEffect(() => {
     setFactIndex(Math.floor(Math.random() * TRADING_FACTS.length));
   }, []);
-  const fact = TRADING_FACTS[factIndex];
-  const { displayed, done } = useTypewriter(fact.fact);
+  const fact = factIndex !== null ? TRADING_FACTS[factIndex] : null;
+  const { displayed, done } = useTypewriter(fact?.fact ?? "");
   const [gameScore, setGameScore] = useState<number | null>(null);
   const [pulse, setPulse] = useState(true);
   const [dots, setDots] = useState(".");
@@ -304,6 +318,9 @@ export function LoadingScreen({ onDismiss }: LoadingScreenProps) {
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Connecting to platform"
       style={{
         position: "fixed",
         inset: 0,
@@ -367,6 +384,8 @@ export function LoadingScreen({ onDismiss }: LoadingScreenProps) {
           </div>
           {/* Animated connecting bar */}
           <div
+            role="status"
+            aria-live="polite"
             style={{
               display: "flex",
               alignItems: "center",
@@ -445,7 +464,7 @@ export function LoadingScreen({ onDismiss }: LoadingScreenProps) {
                 textTransform: "uppercase",
               }}
             >
-              Did you know · {fact.category}
+              Did you know · {fact?.category ?? ""}
             </span>
             <span
               style={{
@@ -492,7 +511,7 @@ export function LoadingScreen({ onDismiss }: LoadingScreenProps) {
               color: "var(--text-tertiary)",
             }}
           >
-            You caught {gameScore} tickers — the platform will be ready soon.
+            You caught {gameScore} tickers. The platform will be ready soon.
           </div>
         )}
 
@@ -537,7 +556,7 @@ export function LoadingScreen({ onDismiss }: LoadingScreenProps) {
             }}
           >
             <span>◉</span>
-            <span>Built by Adit Shah — view portfolio</span>
+            <span>Built by Adit Shah, view portfolio</span>
             <span style={{ opacity: 0.5 }}>↗</span>
           </a>
 
@@ -564,7 +583,6 @@ export function LoadingScreen({ onDismiss }: LoadingScreenProps) {
       <style>{`
         @keyframes slide-progress {
           0%   { transform: translateX(-100%); }
-          50%  { transform: translateX(200%); }
           100% { transform: translateX(200%); }
         }
         @keyframes blink {

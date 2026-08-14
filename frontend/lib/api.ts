@@ -1,5 +1,5 @@
 /**
- * AEQUITAS — Typed API client
+ * AEQUITAS: Typed API client
  * All calls to the FastAPI backend go through this module.
  */
 

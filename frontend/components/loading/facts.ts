@@ -1,5 +1,5 @@
 /**
- * AEQUITAS — Trading & finance facts shown during API connection.
+ * AEQUITAS: Trading & finance facts shown during API connection.
  * All verified, no made-up statistics.
  */
 export const TRADING_FACTS = [
@@ -8,11 +8,11 @@ export const TRADING_FACTS = [
     category: "History",
   },
   {
-    fact: "Warren Buffett bought his first stock at age 11 — 6 shares of Cities Service Preferred at $38 each. It dropped to $27 before recovering.",
+    fact: "Warren Buffett bought his first stock at age 11: 6 shares of Cities Service Preferred at $38 each. It dropped to $27 before recovering.",
     category: "Legend",
   },
   {
-    fact: "The term 'bull market' likely comes from the way a bull attacks — thrusting its horns upward. A bear swipes downward.",
+    fact: "The term 'bull market' likely comes from the way a bull attacks, thrusting its horns upward. A bear swipes downward.",
     category: "Etymology",
   },
   {
@@ -24,7 +24,7 @@ export const TRADING_FACTS = [
     category: "Statistics",
   },
   {
-    fact: "High-frequency trading firms can execute orders in microseconds — faster than the human eye can blink (300–400ms).",
+    fact: "High-frequency trading firms can execute orders in microseconds, faster than the human eye can blink (300–400ms).",
     category: "Technology",
   },
   {
@@ -36,15 +36,15 @@ export const TRADING_FACTS = [
     category: "Quant",
   },
   {
-    fact: "Amazon stock fell over 90% from its 1999 peak to its 2001 trough — then went on to become one of the greatest investments of all time.",
+    fact: "Amazon stock fell over 90% from its 1999 peak to its 2001 trough, then went on to become one of the greatest investments of all time.",
     category: "Legend",
   },
   {
-    fact: "The VIX — the market's 'fear gauge' — measures the implied volatility of S&P 500 options over the next 30 days.",
+    fact: "The VIX, the market's 'fear gauge,' measures the implied volatility of S&P 500 options over the next 30 days.",
     category: "Markets",
   },
   {
-    fact: "Passive index funds now control more U.S. equity market assets than active funds — a milestone crossed for the first time in 2019.",
+    fact: "Passive index funds now control more U.S. equity market assets than active funds, a milestone crossed for the first time in 2019.",
     category: "Trends",
   },
   {
@@ -52,11 +52,11 @@ export const TRADING_FACTS = [
     category: "Quant",
   },
   {
-    fact: "Renaissance Technologies' Medallion Fund — open only to employees — reportedly averaged 66% annual returns before fees from 1988 to 2018.",
+    fact: "Renaissance Technologies' Medallion Fund, open only to employees, reportedly averaged 66% annual returns before fees from 1988 to 2018.",
     category: "Legend",
   },
   {
-    fact: "The flash crash of May 6, 2010 saw the Dow drop ~1,000 points in minutes before recovering — triggered in part by algorithmic trading.",
+    fact: "The flash crash of May 6, 2010 saw the Dow drop ~1,000 points in minutes before recovering, triggered in part by algorithmic trading.",
     category: "Technology",
   },
   {

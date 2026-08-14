@@ -62,7 +62,7 @@ export default function FactorsPage() {
     } catch (e) {
       setFactorError(
         e instanceof Error
-          ? `${e.message} — make sure SPY, IWM, IVE, IWF are ingested as benchmarks.`
+          ? `${e.message}. Make sure SPY, IWM, IVE, IWF are ingested as benchmarks.`
           : "Factor model failed",
       );
     } finally {
@@ -73,7 +73,9 @@ export default function FactorsPage() {
   async function runExecution() {
     setExecLoading(true);
     setExecError(null);
-    const shares = parseInt(totalShares, 10) || 10000;
+    const parsedShares = parseInt(totalShares, 10);
+    const shares =
+      Number.isFinite(parsedShares) && parsedShares > 0 ? parsedShares : 10000;
     try {
       let r: ExecutionScheduleResponse;
       if (execAlgo === "twap") r = await executionApi.twap(execTicker, shares);
@@ -123,19 +125,12 @@ export default function FactorsPage() {
           className="card"
           style={{ padding: "20px 24px", marginBottom: "24px" }}
         >
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "auto auto 1fr auto",
-              gap: "16px",
-              alignItems: "end",
-            }}
-          >
+          <div className="grid grid-cols-1 gap-4 items-end md:grid-cols-[auto_auto_1fr_auto]">
             <div>
               <div className="stat-label" style={{ marginBottom: "6px" }}>
                 Ticker
               </div>
-              <div style={{ display: "flex", gap: "4px" }}>
+              <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
                 {TICKERS.map((t) => (
                   <button
                     key={t}
@@ -210,7 +205,31 @@ export default function FactorsPage() {
           </div>
         )}
 
-        {factorResult && (
+        {factorLoading && (
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              padding: "40px 0",
+              gap: "12px",
+              marginBottom: "24px",
+            }}
+          >
+            <Spinner size={20} />
+            <div
+              style={{
+                fontFamily: "var(--font-mono)",
+                fontSize: "11px",
+                color: "var(--text-tertiary)",
+              }}
+            >
+              Running factor model for {factorTicker}...
+            </div>
+          </div>
+        )}
+
+        {factorResult && !factorLoading && (
           <>
             <div
               style={{
@@ -317,19 +336,12 @@ export default function FactorsPage() {
           className="card"
           style={{ padding: "20px 24px", marginBottom: "24px" }}
         >
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "auto auto 1fr",
-              gap: "16px",
-              marginBottom: "16px",
-            }}
-          >
+          <div className="grid grid-cols-1 gap-4 mb-4 md:grid-cols-[auto_auto_1fr]">
             <div>
               <div className="stat-label" style={{ marginBottom: "6px" }}>
                 Ticker
               </div>
-              <div style={{ display: "flex", gap: "4px" }}>
+              <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
                 {TICKERS.map((t) => (
                   <button
                     key={t}
@@ -363,6 +375,7 @@ export default function FactorsPage() {
               </div>
               <input
                 className="input"
+                aria-label="Total Shares"
                 value={totalShares}
                 onChange={(e) => setTotalShares(e.target.value)}
                 style={{ width: "120px" }}
@@ -415,7 +428,7 @@ export default function FactorsPage() {
           {execAlgo === "is" && (
             <div style={{ marginBottom: "16px" }}>
               <div className="stat-label" style={{ marginBottom: "6px" }}>
-                Urgency: {urgency.toFixed(2)} —{" "}
+                Urgency: {urgency.toFixed(2)} ·{" "}
                 {urgency > 0.66
                   ? "Aggressive (front-loaded)"
                   : urgency < 0.33
@@ -424,6 +437,7 @@ export default function FactorsPage() {
               </div>
               <input
                 type="range"
+                aria-label="Urgency"
                 min="0"
                 max="1"
                 step="0.05"
@@ -467,7 +481,31 @@ export default function FactorsPage() {
           </div>
         )}
 
-        {execResult && (
+        {execLoading && (
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              padding: "40px 0",
+              gap: "12px",
+              marginBottom: "24px",
+            }}
+          >
+            <Spinner size={20} />
+            <div
+              style={{
+                fontFamily: "var(--font-mono)",
+                fontSize: "11px",
+                color: "var(--text-tertiary)",
+              }}
+            >
+              Generating {execAlgo.toUpperCase()} schedule for {execTicker}...
+            </div>
+          </div>
+        )}
+
+        {execResult && !execLoading && (
           <>
             <div
               style={{
