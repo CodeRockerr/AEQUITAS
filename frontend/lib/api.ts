@@ -413,7 +413,39 @@ export interface BenchmarkResponse {
   results: KernelResult[];
 }
 
+export interface PipelineBenchmarkResponse {
+  rows: number;
+  output_rows: number;
+  reps: number;
+  cpp_available: boolean;
+  pandas_ms: number;
+  cpp_ms: number | null;
+  speedup: number | null;
+  max_abs_diff: number | null;
+  note: string;
+}
+
+export interface ParallelBenchmarkResponse {
+  rows: number;
+  symbols: number;
+  reps: number;
+  cpp_available: boolean;
+  cpu_count: number;
+  pandas_sequential_ms: number;
+  cpp_sequential_ms: number | null;
+  cpp_parallel_ms: number | null;
+  sequential_speedup: number | null;
+  parallel_speedup: number | null;
+  note: string;
+}
+
 export const benchmarkApi = {
   kernels: (rows: number) =>
     apiFetch<BenchmarkResponse>(`/api/v1/benchmark/kernels?rows=${rows}`),
+  pipeline: (rows: number) =>
+    apiFetch<PipelineBenchmarkResponse>(`/api/v1/benchmark/pipeline?rows=${rows}`),
+  parallel: (rows: number, symbols: number) =>
+    apiFetch<ParallelBenchmarkResponse>(
+      `/api/v1/benchmark/parallel?rows=${rows}&symbols=${symbols}`,
+    ),
 };
