@@ -1,11 +1,13 @@
 """Benchmark: pandas vs C++ kernels, single-kernel and multi-symbol parallel."""
 import sys, time
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 import numpy as np
 import pandas as pd
 
-sys.path.insert(0, "/home/claude/AEQUITAS/backend/cpp")
-sys.path.insert(0, "/home/claude/AEQUITAS/backend")
+_HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(_HERE))
+sys.path.insert(0, str(_HERE.parent))
 import aequitas_kernels as ck
 from app.algorithms.ml.features import _rsi, _atr
 

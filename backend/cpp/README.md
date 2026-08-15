@@ -103,15 +103,43 @@ already uses a tight compiled path (EWM, rolling max) — and largest of
 all when the GIL-release design lets plain Python threads drive the
 kernels in parallel.
 
+## Lessons learned at the interop boundary
+
+The kernels were originally verified only against `close`/`high`/`low`
+pulled straight off OHLCV data — never NaN. Wiring them into the full
+`compute_features` pipeline (`features_cpp.py`) surfaced a real bug:
+`vol_10d/21d/63d` roll a **rolling std over `return_1d`**, which has a
+single leading NaN from `close.shift(1)`.
+
+pandas' rolling window re-derives validity per window, so a stale NaN
+is "forgotten" the instant it scrolls out. The original `rolling_std`
+kernel kept a running sliding sum instead — `sum += x[i]` once, and a
+NaN poisons that accumulator forever, because subtracting the same NaN
+back out later (`sum -= x[i-w]`) is still NaN + NaN. The kernel didn't
+error; it silently returned all-NaN for the rest of the series. The
+fix (see `rolling_mean_impl`/`rolling_std_impl` in `kernels.cpp`)
+tracks a NaN count alongside the sum and excludes NaN terms from the
+arithmetic entirely, so a window is only invalid while an actual NaN
+sits inside it — matching pandas exactly. Regression coverage for this
+is in `test_equivalence.py` ("w/ leading NaN" cases).
+
+The takeaway for anyone doing a similar port: a kernel that's numerically
+verified against the *specific columns* your benchmark happened to feed
+it is not yet verified against every *shape* of input the real pipeline
+will hand it. `rolling_max`/`rolling_min` still assume NaN-free input —
+true for how this codebase calls them (52-week high/low on raw
+`high`/`low`), called out here explicitly rather than silently relied on.
+
 ## Status / roadmap
 
 - [x] Seven core kernels, pybind11 bindings, zero-copy, GIL release
 - [x] Numerical-equivalence suite vs. the production pandas pipeline
 - [x] Benchmark matrix incl. multi-core parallel scaling (arm64, 8 cores)
 - [x] CMake + scikit-build-core packaging
-- [ ] Drop-in C++ backend for the full 19-feature `compute_features`
-- [ ] Expanded matrix: x86-64, thread/symbol-count scaling, warm/cold cache, NumPy-vectorized middle ground
-- [ ] Wire into the Dockerized deployment
+- [x] Drop-in C++ backend for the full 19-feature `compute_features` (`features_cpp.py`)
+- [x] Wire into the Dockerized deployment (`backend/Dockerfile` builds `./cpp`)
+- [x] x86-64 numbers via CI (`.github/workflows/ci.yml`, `cpp-kernels` job — GitHub-hosted runners are x86-64)
+- [ ] Thread/symbol-count sweep beyond the 8×1M-row case, warm/cold cache, NumPy-vectorized middle ground
 
 ## Author
 

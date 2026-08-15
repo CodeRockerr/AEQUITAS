@@ -49,29 +49,54 @@ Arr make_out(py::ssize_t n, double** ptr) {
 }
 
 // ---- rolling mean (sliding sum, single pass) -------------------------------
+//
+// NaN-aware to match pandas' default rolling().mean(): a window emits a
+// value only once all `w` observations in it are non-NaN. A naive sliding
+// sum can't do this — once a NaN is added, `sum += NaN` contaminates every
+// future value, even after the NaN has scrolled out of the window (adding
+// x[i], then later subtracting the same NaN back out, is still NaN + NaN).
+// pandas instead re-derives validity per window, so a stale NaN is
+// "forgotten" the moment it exits. We reproduce that by tracking a NaN
+// count alongside the sum and excluding NaN terms from the arithmetic
+// entirely, so the sum itself is never poisoned.
 void rolling_mean_impl(const double* x, double* o, py::ssize_t n, int w) {
     double sum = 0.0;
+    py::ssize_t nan_count = 0;
     for (py::ssize_t i = 0; i < n; ++i) {
-        sum += x[i];
-        if (i >= w) sum -= x[i - w];
-        o[i] = (i >= w - 1) ? sum / w : NaN;
+        if (std::isnan(x[i])) ++nan_count; else sum += x[i];
+        if (i >= w) {
+            double xo = x[i - w];
+            if (std::isnan(xo)) --nan_count; else sum -= xo;
+        }
+        o[i] = (i >= w - 1 && nan_count == 0) ? sum / w : NaN;
     }
 }
 
 // ---- rolling std, sample (ddof=1), Welford-style sliding -------------------
+// Same NaN-count technique as rolling_mean_impl above.
 void rolling_std_impl(const double* x, double* o, py::ssize_t n, int w) {
     // two-pass per window is O(n*w); instead keep sliding sum and sum of
     // squares with Kahan-free doubles (adequate for OHLCV magnitudes,
     // verified against pandas to ~1e-9 relative tolerance).
     double s = 0.0, s2 = 0.0;
+    py::ssize_t nan_count = 0;
     for (py::ssize_t i = 0; i < n; ++i) {
-        s += x[i];
-        s2 += x[i] * x[i];
-        if (i >= w) {
-            s -= x[i - w];
-            s2 -= x[i - w] * x[i - w];
+        if (std::isnan(x[i])) {
+            ++nan_count;
+        } else {
+            s += x[i];
+            s2 += x[i] * x[i];
         }
-        if (i >= w - 1) {
+        if (i >= w) {
+            double xo = x[i - w];
+            if (std::isnan(xo)) {
+                --nan_count;
+            } else {
+                s -= xo;
+                s2 -= xo * xo;
+            }
+        }
+        if (i >= w - 1 && nan_count == 0) {
             double mean = s / w;
             double var = (s2 - w * mean * mean) / (w - 1);
             o[i] = var > 0.0 ? std::sqrt(var) : 0.0;
