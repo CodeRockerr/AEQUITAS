@@ -664,7 +664,7 @@ export default function AboutPage() {
                 Portfolio
               </a>
               <a
-                href="https://drive.google.com/file/d/16_bFetVUPBOT01t3aSIqqDIR703DT7Lc/view?usp=sharing"
+                href="https://drive.google.com/file/d/1JdZfo_4qNAXY7i3eR5bb7H5pSvyslel4/view?usp=sharing"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn btn-ghost"
