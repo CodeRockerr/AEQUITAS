@@ -400,9 +400,17 @@ export interface KernelResult {
   kernel: string;
   description: string;
   pandas_ms: number;
+  pandas_cold_ms: number;
+  pandas_peak_kb: number;
   cpp_ms: number | null;
+  cpp_cold_ms: number | null;
+  cpp_peak_kb: number | null;
   speedup: number | null;
   max_abs_diff: number | null;
+  numpy_ms: number | null;
+  numpy_peak_kb: number | null;
+  numpy_speedup: number | null;
+  numpy_max_abs_diff: number | null;
 }
 
 export interface BenchmarkResponse {
@@ -439,6 +447,63 @@ export interface ParallelBenchmarkResponse {
   note: string;
 }
 
+export interface ScalingPoint {
+  threads: number;
+  ms: number;
+  speedup_vs_1_thread: number | null;
+}
+
+export interface ScalingBenchmarkResponse {
+  rows: number;
+  symbols: number;
+  cpp_available: boolean;
+  cpu_count: number;
+  points: ScalingPoint[];
+  note: string;
+}
+
+export type EdgeCaseScenario = "clean" | "leading_nan" | "interior_nan" | "all_nan";
+export type EdgeCaseKernel = "rolling_std" | "rolling_max";
+
+export interface EdgeCaseResponse {
+  scenario: EdgeCaseScenario;
+  kernel: EdgeCaseKernel;
+  cpp_available: boolean;
+  input: (number | null)[];
+  pandas: (number | null)[];
+  cpp: (number | null)[] | null;
+  numpy: (number | null)[];
+  cpp_matches_pandas: boolean | null;
+  numpy_matches_pandas: boolean;
+  note: string;
+}
+
+export interface RealBacktestResponse {
+  ticker: string;
+  start_date: string;
+  end_date: string;
+  n_bars: number;
+  n_bars_after_warmup: number;
+  years: number;
+  cpp_available: boolean;
+  pandas_ms: number;
+  cpp_ms: number | null;
+  speedup: number | null;
+  max_abs_diff: number | null;
+  strategy: string;
+  total_return_pct: number;
+  annual_return_pct: number;
+  sharpe_ratio: number;
+  n_trades: number;
+  backtest_results_match: boolean | null;
+  note: string;
+}
+
+export interface RunCountResponse {
+  count: number | null;
+  note: string;
+}
+
 export const benchmarkApi = {
   kernels: (rows: number) =>
     apiFetch<BenchmarkResponse>(`/api/v1/benchmark/kernels?rows=${rows}`),
@@ -448,4 +513,15 @@ export const benchmarkApi = {
     apiFetch<ParallelBenchmarkResponse>(
       `/api/v1/benchmark/parallel?rows=${rows}&symbols=${symbols}`,
     ),
+  scaling: (rows: number) =>
+    apiFetch<ScalingBenchmarkResponse>(`/api/v1/benchmark/scaling?rows=${rows}`),
+  edgeCase: (scenario: EdgeCaseScenario, kernel: EdgeCaseKernel) =>
+    apiFetch<EdgeCaseResponse>(
+      `/api/v1/benchmark/edge-case?scenario=${scenario}&kernel=${kernel}`,
+    ),
+  realBacktest: (ticker: string, years: number) =>
+    apiFetch<RealBacktestResponse>(
+      `/api/v1/benchmark/real-backtest?ticker=${ticker}&years=${years}`,
+    ),
+  runCount: () => apiFetch<RunCountResponse>("/api/v1/benchmark/run-count"),
 };
