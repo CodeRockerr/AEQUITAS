@@ -1,4 +1,4 @@
-"""AEQUITAS — FastAPI application factory."""
+"""AEQUITAS - FastAPI application factory."""
 
 import time
 from collections.abc import AsyncGenerator, Awaitable, Callable
@@ -17,6 +17,7 @@ from app.api.v1 import (
     extended_agents,
     health,
     history,
+    live_decision,
     market_data,
     ml,
     pricing,
@@ -89,6 +90,7 @@ def create_app() -> FastAPI:
     app.include_router(history.router, tags=["history"])
     app.include_router(extended_agents.router, tags=["extended-agents"])
     app.include_router(benchmark.router, tags=["benchmark"])
+    app.include_router(live_decision.router, tags=["live-decision"])
     app.include_router(chat.router, tags=["chat"])
 
     return app
