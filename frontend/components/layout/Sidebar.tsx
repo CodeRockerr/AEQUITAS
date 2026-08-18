@@ -7,7 +7,7 @@ import { SITE_STATS } from "@/lib/site-stats";
 
 // Grouped nav reduces top-level cognitive load: research backing
 // shows that reducing stimuli and clarifying intent improves trust and
-// usability in data-dense interfaces. 8 flat items -> 2 ungrouped + 2 groups.
+// usability in data-dense interfaces. 9 flat items -> 2 ungrouped + 3 groups.
 const NAV_TOP = [
   { href: "/", label: "Overview", icon: "○" },
   { href: "/dashboard", label: "Dashboard", icon: "◈" },
@@ -27,7 +27,13 @@ const NAV_GROUPS = [
       { href: "/backtests", label: "Backtests", icon: "◫" },
       { href: "/risk", label: "Risk", icon: "◬" },
       { href: "/factors", label: "Factors", icon: "◇" },
-      { href: "/performance", label: "Python vs C++", icon: "◭" },
+    ],
+  },
+  {
+    label: "Python vs C++",
+    items: [
+      { href: "/performance", label: "Benchmarks", icon: "◭" },
+      { href: "/trading-simulation", label: "Trading simulation", icon: "◔" },
     ],
   },
 ];
