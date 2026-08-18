@@ -2,7 +2,7 @@
 
 **Agentic Equity & Quantitative Intelligence Trading Analysis System**
 
-A full-stack quantitative research platform combining real financial algorithms, ML models, real-time price streaming, autonomous LLM agents, and an AI chat interface — all running at $0/month in production.
+A full-stack quantitative research platform combining real financial algorithms, ML models, real-time price streaming, autonomous LLM agents, and an AI chat interface - all running at $0/month in production.
 
 [![CI](https://github.com/CodeRockerr/AEQUITAS/actions/workflows/ci.yml/badge.svg)](https://github.com/CodeRockerr/AEQUITAS/actions)
 ![Python](https://img.shields.io/badge/Python-3.13-blue)
@@ -14,7 +14,7 @@ A full-stack quantitative research platform combining real financial algorithms,
 
 ## What is this?
 
-AEQUITAS is a personal research platform built to be both a serious portfolio project and the foundation of a real quant/fintech SaaS product. It streams live market data, runs a battery of quantitative finance algorithms and ML models, hands the results to a multi-agent LLM pipeline that researches a company and writes a structured investment thesis — and now includes a floating AI chat widget where users can ask anything about any stock in plain English and get answers grounded in real algorithm output.
+AEQUITAS is a personal research platform built to be both a serious portfolio project and the foundation of a real quant/fintech SaaS product. It streams live market data, runs a battery of quantitative finance algorithms and ML models, hands the results to a multi-agent LLM pipeline that researches a company and writes a structured investment thesis - and now includes a floating AI chat widget where users can ask anything about any stock in plain English and get answers grounded in real algorithm output.
 
 Everything in this repo is real, working, and tested. No mocked endpoints, no placeholder data.
 
@@ -46,12 +46,12 @@ Everything in this repo is real, working, and tested. No mocked endpoints, no pl
 
 ```mermaid
 flowchart TB
-    subgraph Frontend["Frontend — Next.js 14, TypeScript, Recharts, lightweight-charts"]
+    subgraph Frontend["Frontend - Next.js 14, TypeScript, Recharts, lightweight-charts"]
         direction LR
         F1["Overview"] --- F2["Dashboard"] --- F3["Backtests"] --- F4["Theses"] --- F5["Risk"] --- F6["Factors"] --- F7["Agents"] --- F8["Chat ◈"]
     end
 
-    subgraph API["API Layer — FastAPI, Pydantic v2, SQLAlchemy async, WebSocket"]
+    subgraph API["API Layer - FastAPI, Pydantic v2, SQLAlchemy async, WebSocket"]
         direction LR
         A1["health"] --- A2["market-data"] --- A3["ml"] --- A4["signals"] --- A5["agents"] --- A6["history"] --- A7["ws/prices"] --- A8["chat"]
     end
@@ -66,16 +66,16 @@ flowchart TB
 
     subgraph Agent["Agent Layer"]
         AG1["LangGraph 4-node graph + News Sentiment + Earnings + Portfolio Construction"]
-        AG2["Groq LLM — llama-3.3-70b-versatile (free tier)"]
+        AG2["Groq LLM - llama-3.3-70b-versatile (free tier)"]
     end
 
     subgraph Chat["AI Chat"]
-        CH1["Groq tool_use — 10 tools → real AEQUITAS endpoints"]
+        CH1["Groq tool_use - 10 tools → real AEQUITAS endpoints"]
     end
 
     subgraph Storage["Storage"]
-        S1[("Neon — Postgres 16")]
-        S2[("Upstash — Redis")]
+        S1[("Neon - Postgres 16")]
+        S2[("Upstash - Redis")]
     end
 
     Frontend -->|"REST + WebSocket"| API
@@ -91,11 +91,11 @@ flowchart TB
 | Backend (FastAPI) | Render (free tier) | Auto-deploys on push to `main`; migrations run at startup |
 | Database | Neon (serverless Postgres 16) | Pooled connection over TLS |
 | Cache | Upstash Redis | TLS (`rediss://`), LRU eviction |
-| Keep-warm | GitHub Actions | Pings `/health` every 10 min — prevents Render idle spin-down |
+| Keep-warm | GitHub Actions | Pings `/health` every 10 min - prevents Render idle spin-down |
 
 **Total hosting cost: $0/month.**
 
-**Cold-start handling:** Render's free tier takes ~50-60s to cold-start. A scheduled GitHub Actions workflow prevents this. On first visit, a full-screen animated loading experience engages the user — typewriter finance facts, a catch-the-ticker mini game, a link to the author's portfolio, and a skip button. Auto-dismisses when the API responds (90s hard cap).
+**Cold-start handling:** Render's free tier takes ~50-60s to cold-start. A scheduled GitHub Actions workflow prevents this. On first visit, a full-screen animated loading experience engages the user - typewriter finance facts, a catch-the-ticker mini game, a link to the author's portfolio, and a skip button. Auto-dismisses when the API responds (90s hard cap).
 
 ---
 
@@ -105,10 +105,10 @@ flowchart TB
 |---|---|
 | **Frontend** | Next.js 14 (App Router), TypeScript, Tailwind CSS, Recharts, lightweight-charts (TradingView) |
 | **Backend** | FastAPI, Python 3.13, Pydantic v2, SQLAlchemy 2.0 (async), WebSocket |
-| **Database** | PostgreSQL 16 — Neon in production, TimescaleDB Docker image locally |
-| **Cache** | Redis — Upstash in production, Docker locally |
+| **Database** | PostgreSQL 16 - Neon in production, TimescaleDB Docker image locally |
+| **Cache** | Redis - Upstash in production, Docker locally |
 | **Agent Orchestration** | LangGraph 0.2 |
-| **LLM** | Groq API — `llama-3.3-70b-versatile` (free tier, used for agents + chat widget) |
+| **LLM** | Groq API - `llama-3.3-70b-versatile` (free tier, used for agents + chat widget) |
 | **ML** | XGBoost, SHAP, hmmlearn, scikit-learn, statsmodels |
 | **Native Extensions** | C++20 feature kernels via pybind11 (zero-copy NumPy, GIL-released) |
 | **Migrations** | Alembic (infrastructure-agnostic) |
@@ -122,26 +122,26 @@ flowchart TB
 ### Pricing & Risk
 - **Black-Scholes** option pricer with full Greeks (Delta, Gamma, Vega, Theta, Rho)
 - **Implied volatility** solver via Newton-Raphson
-- **VaR / CVaR** — historical, parametric, and Monte Carlo methods
+- **VaR / CVaR** - historical, parametric, and Monte Carlo methods
 - **Mean-variance portfolio optimisation** with efficient frontier
 
 ### Machine Learning
-- **HMM regime detector** — Bull / Bear / High-Volatility classification
+- **HMM regime detector** - Bull / Bear / High-Volatility classification
 - **XGBoost forecaster** with `TimeSeriesSplit` (zero lookahead bias) + SHAP attribution
 - 19-feature pipeline with graceful degradation on short histories (`min_periods=1`)
 
-### C++ Feature Kernels *(CppCon 2026 poster — accepted)*
+### C++ Feature Kernels *(CppCon 2026 poster - accepted)*
 - Rolling mean/std/max/min, EWM (span + Wilder), RSI, ATR reimplemented in **C++20** via **pybind11**
 - Zero-copy NumPy buffer exchange, GIL released around every compute loop
 - **1.3×–40× per-kernel** · **39.8× end-to-end** on multi-symbol parallel workloads (8 × 1M rows)
-- Drop-in replacement — identical Python call signature, falls back to pandas if extension not built
+- Drop-in replacement - identical Python call signature, falls back to pandas if extension not built
 - Numerically equivalent to pandas to ≤ 4×10⁻⁹
 
 ### Signals & Execution
-- **RSI / MACD / Bollinger Bands** — normalised to [-1, +1], combinable into a weighted score
-- **Pairs trading** — Engle-Granger cointegration + Kalman filter dynamic hedge ratio
-- **Fama-French 3-factor model** — alpha + Market/SMB/HML decomposition with t-statistic
-- **TWAP / VWAP / Implementation Shortfall** — execution scheduling with share-distribution charts
+- **RSI / MACD / Bollinger Bands** - normalised to [-1, +1], combinable into a weighted score
+- **Pairs trading** - Engle-Granger cointegration + Kalman filter dynamic hedge ratio
+- **Fama-French 3-factor model** - alpha + Market/SMB/HML decomposition with t-statistic
+- **TWAP / VWAP / Implementation Shortfall** - execution scheduling with share-distribution charts
 
 ### Backtesting
 - Vectorised engine (pure numpy/pandas), full tearsheet: Sharpe, Sortino, Calmar, max drawdown, win rate, alpha
@@ -150,7 +150,7 @@ flowchart TB
 
 ## AI Chat Widget
 
-Every page has a floating **◈** button (bottom-right) that opens an AI chat panel. Powered by **Groq's free tier** with tool use — the model calls your real AEQUITAS endpoints to answer questions with actual data, never hallucinated numbers.
+Every page has a floating **◈** button (bottom-right) that opens an AI chat panel. Powered by **Groq's free tier** with tool use - the model calls your real AEQUITAS endpoints to answer questions with actual data, never hallucinated numbers.
 
 **10 tools available to the model:**
 
@@ -201,7 +201,7 @@ flowchart LR
     critic -->|"approved"| END(["END"])
 ```
 
-Plus three standalone agents: **news sentiment**, **earnings analysis**, **portfolio construction** — all on the Agents page with step-by-step progress indicators and Observed → Why it matters → Next action insight strips.
+Plus three standalone agents: **news sentiment**, **earnings analysis**, **portfolio construction** - all on the Agents page with step-by-step progress indicators and Observed → Why it matters → Next action insight strips.
 
 ---
 
@@ -281,7 +281,7 @@ cd frontend
 npm install && npm run dev
 ```
 
-Open `http://localhost:3000` — click the **◈** button to try the AI chat widget.
+Open `http://localhost:3000` - click the **◈** button to try the AI chat widget.
 
 ---
 
@@ -299,7 +299,7 @@ APP_DEBUG=true
 API_BASE_URL=http://localhost:8000   # set to Render URL in production
 ```
 
-Frontend: `NEXT_PUBLIC_API_URL` (build-time variable — changing on Vercel requires redeploy).
+Frontend: `NEXT_PUBLIC_API_URL` (build-time variable - changing on Vercel requires redeploy).
 
 ---
 
@@ -347,29 +347,29 @@ pytest tests/unit/ -v
 ## CI/CD
 
 - **CI** (`ci.yml`): Ruff, Mypy, Pytest (backend) + ESLint, tsc, build (frontend) on every push and PR
-- **Keep-warm** (`keep-warm.yml`): pings `/health` every 10 minutes — prevents Render idle spin-down, doubles as uptime monitoring
-- Branch protection on `main` — both jobs must pass before merge
+- **Keep-warm** (`keep-warm.yml`): pings `/health` every 10 minutes - prevents Render idle spin-down, doubles as uptime monitoring
+- Branch protection on `main` - both jobs must pass before merge
 
 ---
 
 ## Roadmap
 
 ### Completed
-- [x] **Week 1-8** — Foundation, data pipeline, algorithms (Black-Scholes, VaR, portfolio, HMM, XGBoost, signals, backtesting)
-- [x] **Week 9** — Production deployment (originally Railway, migrated to Render + Neon + Upstash)
-- [x] **Week 10** — Real-time WebSocket streaming, auto-ingest, candlestick charts, Factors page
-- [x] **Week 11** — 3 additional agents (news sentiment, earnings, portfolio construction); AgentProgress + InsightStrip UX
-- [x] **Week 12** — Infrastructure migration to $0/month stack; keep-warm workflow
-- [x] **Week 13** — C++20 acceleration layer; CppCon 2026 poster accepted
-- [x] **Week 14** — Animated loading screen with mini game and portfolio link
-- [x] **Week 15** — Groq-powered AI chat widget with 10 AEQUITAS tools
+- [x] **Week 1-8** - Foundation, data pipeline, algorithms (Black-Scholes, VaR, portfolio, HMM, XGBoost, signals, backtesting)
+- [x] **Week 9** - Production deployment (originally Railway, migrated to Render + Neon + Upstash)
+- [x] **Week 10** - Real-time WebSocket streaming, auto-ingest, candlestick charts, Factors page
+- [x] **Week 11** - 3 additional agents (news sentiment, earnings, portfolio construction); AgentProgress + InsightStrip UX
+- [x] **Week 12** - Infrastructure migration to $0/month stack; keep-warm workflow
+- [x] **Week 13** - C++20 acceleration layer; CppCon 2026 poster accepted
+- [x] **Week 14** - Animated loading screen with mini game and portfolio link
+- [x] **Week 15** - Groq-powered AI chat widget with 10 AEQUITAS tools
 
 ### In Progress / Next
 - [ ] **MCP server** - Claude.ai compatible MCP endpoint so users can connect AEQUITAS as an integration in Claude.ai
 - [ ] **C++ pipeline integration** - full `compute_features()` C++ backend, Render build
 - [ ] **UI/UX design-system pass** - spacing tokens, unified Button, framer-motion across all pages
 
-### Planned — Enterprise SaaS Phase
+### Planned - Enterprise SaaS Phase
 1. Auth + RBAC (NextAuth.js)
 2. Billing (Stripe)
 3. Consumer dashboard (watchlists, saved theses, portfolio tracker)
@@ -390,4 +390,4 @@ pytest tests/unit/ -v
 
 ## License
 
-MIT — see [LICENSE](LICENSE) for details.
+MIT - see [LICENSE](LICENSE) for details.

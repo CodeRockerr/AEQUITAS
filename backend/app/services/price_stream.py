@@ -1,5 +1,5 @@
 """
-AEQUITAS — Real-time price streaming service.
+AEQUITAS - Real-time price streaming service.
 
 Architecture:
   - Tracks which tickers have active WebSocket subscribers
@@ -9,7 +9,7 @@ Architecture:
     WebSocket connection subscribed to that ticker
 
 This subscriber-based throttling is what keeps us within yFinance's
-unofficial rate limits even as the number of watched tickers grows —
+unofficial rate limits even as the number of watched tickers grows -
 we never poll a ticker nobody is currently viewing.
 
 If a ticker has zero subscribers, its refresh loop stops automatically.
@@ -226,7 +226,7 @@ class PriceStreamManager:
         """
         Fetch current price and % change from yFinance.
 
-        Runs in a thread executor since yfinance is synchronous —
+        Runs in a thread executor since yfinance is synchronous -
         prevents blocking the asyncio event loop.
         """
         loop = asyncio.get_event_loop()
@@ -234,7 +234,7 @@ class PriceStreamManager:
 
     @staticmethod
     def _fetch_price_sync(ticker: str) -> tuple[float, float] | None:
-        """Synchronous yFinance fetch — called via executor."""
+        """Synchronous yFinance fetch - called via executor."""
         try:
             stock = yf.Ticker(ticker)
             info = stock.fast_info
@@ -252,7 +252,7 @@ class PriceStreamManager:
     async def _fetch_price_from_db(self, ticker: str) -> tuple[float, float] | None:
         """
         Fall back to the two most recent daily closes already stored
-        in TimescaleDB — used when markets are closed and yfinance's
+        in TimescaleDB - used when markets are closed and yfinance's
         live feed has nothing current to offer.
 
         change_pct here is computed from the last two stored closes,
@@ -313,5 +313,5 @@ class PriceStreamManager:
             sub.connections.discard(ws)
 
 
-# Module-level singleton — one instance for the entire app lifetime
+# Module-level singleton - one instance for the entire app lifetime
 price_stream_manager = PriceStreamManager()

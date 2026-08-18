@@ -1,9 +1,9 @@
 """
-AEQUITAS — Unit tests for the news sentiment, earnings, and
+AEQUITAS - Unit tests for the news sentiment, earnings, and
 portfolio construction agents.
 
 We test the pure parsing/calculation logic without hitting Finnhub
-or a real LLM — those paths are integration-tested manually.
+or a real LLM - those paths are integration-tested manually.
 """
 
 import pytest

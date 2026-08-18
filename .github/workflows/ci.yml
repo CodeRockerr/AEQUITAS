@@ -1,5 +1,5 @@
 # ═══════════════════════════════════════════════════════════════
-#  AEQUITAS — CI Pipeline (fixed)
+#  AEQUITAS - CI Pipeline (fixed)
 # ═══════════════════════════════════════════════════════════════
 
 name: CI
@@ -53,7 +53,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4        # v4 is correct — the Node24 fix is the env var above
+        uses: actions/checkout@v4        # v4 is correct - the Node24 fix is the env var above
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -86,7 +86,7 @@ jobs:
   # ── C++ kernels (x86-64) ─────────────────────────────────────
   # GitHub-hosted ubuntu-latest runners are x86-64, so this job doubles as
   # the poster's x86-64 leg of the benchmark matrix (dev numbers are
-  # arm64/Apple clang). Numbers vary run to run on a shared CI runner —
+  # arm64/Apple clang). Numbers vary run to run on a shared CI runner -
   # treat them as a second, independent data point, not a substitute for
   # the M-series measurements.
   cpp-kernels:
@@ -117,7 +117,7 @@ jobs:
       - name: Publish to job summary
         run: |
           {
-            echo "### C++ kernel benchmark — x86-64 (GitHub Actions runner)"
+            echo "### C++ kernel benchmark - x86-64 (GitHub Actions runner)"
             echo '```'
             cat backend/cpp/benchmark-x86_64.txt
             echo '```'

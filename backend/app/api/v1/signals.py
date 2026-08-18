@@ -1,5 +1,5 @@
 """
-AEQUITAS — Signals and backtesting API endpoints.
+AEQUITAS - Signals and backtesting API endpoints.
 
 GET  /api/v1/signals/{ticker}              momentum signals
 POST /api/v1/signals/pairs                 pairs trading signal

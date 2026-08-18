@@ -1,5 +1,5 @@
 """
-AEQUITAS — Agentic research API endpoints.
+AEQUITAS - Agentic research API endpoints.
 
 POST /api/v1/agents/research/{ticker}    run full research agent
 POST /api/v1/agents/ingest-filing/{ticker}  store a filing document
@@ -68,10 +68,10 @@ async def run_research(
     Run the full AEQUITAS research agent for a ticker.
 
     Pipeline:
-      1. Research node — retrieves company info + SEC filing chunks
-      2. Quant node    — computes regime, signals, forecast, VaR
-      3. Thesis node   — Claude synthesises investment thesis
-      4. Critic node   — Claude evaluates, optionally requests revision
+      1. Research node - retrieves company info + SEC filing chunks
+      2. Quant node    - computes regime, signals, forecast, VaR
+      3. Thesis node   - Claude synthesises investment thesis
+      4. Critic node   - Claude evaluates, optionally requests revision
 
     Takes 15-30 seconds depending on Claude API response time.
     Requires the ticker to be ingested first via the market data endpoint.
@@ -137,7 +137,7 @@ async def ingest_filing(
     if len(req.content.strip()) < 100:
         raise HTTPException(
             status_code=422,
-            detail="Content too short — minimum 100 characters",
+            detail="Content too short - minimum 100 characters",
         )
 
     chunks = chunk_text(req.content, chunk_size=500, overlap=50)

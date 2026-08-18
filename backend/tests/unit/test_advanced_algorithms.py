@@ -1,5 +1,5 @@
 """
-AEQUITAS — Unit tests for Fama-French and execution algorithms.
+AEQUITAS - Unit tests for Fama-French and execution algorithms.
 """
 
 import numpy as np

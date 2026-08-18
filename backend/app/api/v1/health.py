@@ -1,13 +1,13 @@
 """
-AEQUITAS — Health check endpoints.
+AEQUITAS - Health check endpoints.
 
 A health endpoint is the first thing ops teams and load balancers
 check. It tells them whether the service is alive and ready to
 serve traffic. Railway and Vercel use this to know when your
 deploy succeeded.
 
-GET /health        — is the app running at all? (liveness)
-GET /health/ready  — is the app ready to serve traffic? (readiness)
+GET /health        - is the app running at all? (liveness)
+GET /health/ready  - is the app ready to serve traffic? (readiness)
 """
 
 import time
@@ -49,7 +49,7 @@ class ReadinessResponse(BaseModel):
 @router.get("/health", response_model=HealthResponse)
 async def health_check() -> HealthResponse:
     """
-    Liveness check — confirms the app process is running.
+    Liveness check - confirms the app process is running.
 
     Returns 200 OK if the app is alive.
     This is all Railway needs to confirm a successful deploy.
@@ -66,7 +66,7 @@ async def health_check() -> HealthResponse:
 @router.get("/health/ready", response_model=ReadinessResponse)
 async def readiness_check() -> ReadinessResponse:
     """
-    Readiness check — confirms all dependencies are reachable.
+    Readiness check - confirms all dependencies are reachable.
 
     Returns 200 if the app can serve traffic (DB + Redis up).
     Returns 503 if any dependency is down.

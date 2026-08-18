@@ -1,5 +1,5 @@
 """
-AEQUITAS — Async database session management.
+AEQUITAS - Async database session management.
 
 Concepts:
   - Connection pool: instead of opening/closing a DB connection
@@ -12,7 +12,7 @@ Concepts:
 
   - Dependency injection: FastAPI's `Depends(get_db)` pattern
     gives each request its own session, commits on success,
-    rolls back on error, and closes cleanly — automatically.
+    rolls back on error, and closes cleanly - automatically.
 """
 
 from collections.abc import AsyncGenerator
@@ -28,7 +28,7 @@ from app.config import settings
 
 # ── Engine ────────────────────────────────────────────────────
 # The engine manages the connection pool.
-# echo=True logs all SQL in development — helpful for debugging,
+# echo=True logs all SQL in development - helpful for debugging,
 # never use in production (too noisy, leaks query details).
 engine = create_async_engine(
     settings.async_database_url,

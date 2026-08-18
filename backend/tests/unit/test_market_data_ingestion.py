@@ -1,8 +1,8 @@
 """
-AEQUITAS — Unit tests for market data validation layer.
+AEQUITAS - Unit tests for market data validation layer.
 
 These tests cover the Pydantic validation models only.
-No database, no yFinance calls — pure logic tests.
+No database, no yFinance calls - pure logic tests.
 Fast to run, easy to understand.
 """
 
@@ -20,7 +20,7 @@ def test_ohlcv_row_valid() -> None:
     """A well-formed OHLCV row should validate successfully."""
     row = OHLCVRow(
         time=datetime.now(UTC),
-        ticker="aapl",  # lowercase — should be normalised
+        ticker="aapl",  # lowercase - should be normalised
         interval="1d",
         open=Decimal("150.00"),
         high=Decimal("155.00"),

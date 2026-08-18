@@ -1,10 +1,10 @@
 """
-AEQUITAS — C++-backed feature engineering pipeline.
+AEQUITAS - C++-backed feature engineering pipeline.
 
 Drop-in replacement for `compute_features()` (features.py) that routes the
 rolling-window and exponential-smoothing primitives through the C++20
 kernels (backend/cpp, pybind11) instead of pandas. Column-for-column,
-row-for-row identical output — see `test_pipeline_equivalence` in
+row-for-row identical output - see `test_pipeline_equivalence` in
 backend/cpp/test_equivalence.py.
 
 This is the CppCon 2026 poster's "drop-in backend for the full 19-feature
@@ -14,7 +14,7 @@ new C++ was needed once rolling_mean/std were made NaN-aware (see
 kernels.cpp) to match pandas' behavior on the leading NaN in return_1d.
 
 Degrades by raising ImportError at import time if the extension isn't
-built in this environment — callers (the benchmark endpoint, the
+built in this environment - callers (the benchmark endpoint, the
 equivalence test) check `CPP_AVAILABLE` first rather than relying on this
 raising, so pandas stays the only mandatory path.
 """
@@ -38,7 +38,7 @@ def _series(values: np.ndarray, like: pd.Series) -> pd.Series:
 def compute_features_cpp(df: pd.DataFrame) -> pd.DataFrame:
     """
     C++-backed equivalent of `compute_features()`. See features.py for the
-    feature definitions — this mirrors that function line for line, swapping
+    feature definitions - this mirrors that function line for line, swapping
     each pandas rolling/ewm call for the matching C++ kernel.
     """
     if not CPP_AVAILABLE:
@@ -54,7 +54,7 @@ def compute_features_cpp(df: pd.DataFrame) -> pd.DataFrame:
     high = feat["high"]
     low = feat["low"]
 
-    # ── Returns (plain NumPy — no kernel needed) ─────────────────
+    # ── Returns (plain NumPy - no kernel needed) ─────────────────
     feat["return_1d"] = np.log(close / close.shift(1))
     feat["return_5d"] = np.log(close / close.shift(5))
     feat["return_21d"] = np.log(close / close.shift(21))

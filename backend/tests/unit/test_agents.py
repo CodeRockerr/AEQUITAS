@@ -1,5 +1,5 @@
 """
-AEQUITAS — Unit tests for agent components.
+AEQUITAS - Unit tests for agent components.
 
 We test the pure, non-LLM parts of the agent system:
   - State structure validation
@@ -7,7 +7,7 @@ We test the pure, non-LLM parts of the agent system:
   - Vector store utilities
 
 The LLM-calling nodes (research, thesis, critic) are integration
-tests — they require a real API key and are tested manually.
+tests - they require a real API key and are tested manually.
 """
 
 import pytest
@@ -90,7 +90,7 @@ def test_chunk_text_preserves_content() -> None:
     chunks = chunk_text(text, chunk_size=300, overlap=30)
 
     # Every unique word in original should appear somewhere in chunks
-    # (overlap means some appear twice — that's correct)
+    # (overlap means some appear twice - that's correct)
     all_chunk_words = set(" ".join(chunks).split())
     original_words = set(words)
     assert original_words.issubset(all_chunk_words)

@@ -1,5 +1,5 @@
 # ═══════════════════════════════════════════════════════════════
-#  AEQUITAS Frontend — Dockerfile
+#  AEQUITAS Frontend - Dockerfile
 # ═══════════════════════════════════════════════════════════════
 
 FROM node:20-alpine AS base
@@ -9,7 +9,7 @@ WORKDIR /app
 # ── Stage 1: install dependencies ─────────────────────────────
 FROM base AS deps
 
-# Copy package files first (layer caching — same trick as backend)
+# Copy package files first (layer caching - same trick as backend)
 COPY package.json package-lock.json* ./
 
 RUN npm ci

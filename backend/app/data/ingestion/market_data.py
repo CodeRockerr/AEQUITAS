@@ -1,5 +1,5 @@
 """
-AEQUITAS — Market data ingestion via yFinance.
+AEQUITAS - Market data ingestion via yFinance.
 """
 
 from datetime import UTC, datetime

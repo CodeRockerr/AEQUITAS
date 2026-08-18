@@ -1,5 +1,5 @@
 # ═══════════════════════════════════════════════════════════════
-#  AEQUITAS — Makefile
+#  AEQUITAS - Makefile
 #  Usage: make <target>
 #  Run `make help` to see all available commands.
 # ═══════════════════════════════════════════════════════════════
@@ -16,7 +16,7 @@ RESET := \033[0m
 # ─────────────────────────────────────────────────────────────
 help: ## Show this help message
 	@echo ""
-	@echo "$(BOLD)AEQUITAS — available commands$(RESET)"
+	@echo "$(BOLD)AEQUITAS - available commands$(RESET)"
 	@echo ""
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
 		awk 'BEGIN {FS = ":.*?## "}; \
@@ -53,7 +53,7 @@ build: ## Rebuild all Docker images without cache
 	docker compose -f infra/docker-compose.yml build --no-cache
 
 # ─────────────────────────────────────────────────────────────
-#  BACKEND — code quality
+#  BACKEND - code quality
 # ─────────────────────────────────────────────────────────────
 
 lint: ## Run Ruff linter on the backend
@@ -130,9 +130,9 @@ install: install-backend install-frontend ## Install all dependencies
 setup: ## First-time project setup (copy .env, install deps)
 	@if [ ! -f .env ]; then \
 		cp .env.example .env; \
-		echo "$(GREEN).env created from .env.example — fill in your real values$(RESET)"; \
+		echo "$(GREEN).env created from .env.example - fill in your real values$(RESET)"; \
 	else \
-		echo ".env already exists — skipping"; \
+		echo ".env already exists - skipping"; \
 	fi
 	$(MAKE) install
 

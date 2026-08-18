@@ -1,5 +1,5 @@
 """
-AEQUITAS — Execution algorithms: TWAP, VWAP, Implementation Shortfall.
+AEQUITAS - Execution algorithms: TWAP, VWAP, Implementation Shortfall.
 
 These are the algorithms used by institutional traders to break large
 orders into smaller pieces to minimise market impact.
@@ -9,11 +9,11 @@ Why does execution matter?
   will move the price against you (market impact). Execution
   algorithms slice the order over time or volume to minimise this.
 
-TWAP — Time-Weighted Average Price
+TWAP - Time-Weighted Average Price
   Split the order equally over N time intervals.
   Simple, predictable, used when you want to track time.
 
-VWAP — Volume-Weighted Average Price
+VWAP - Volume-Weighted Average Price
   Split the order proportionally to expected intraday volume.
   Since volume follows a U-shape (high at open/close, low midday),
   VWAP schedules more shares at open and close.
@@ -22,7 +22,7 @@ VWAP — Volume-Weighted Average Price
 Implementation Shortfall (IS)
   Minimise the difference between the decision price (when you
   decided to trade) and the actual average execution price.
-  Uses an urgency parameter — trade faster if the stock is moving
+  Uses an urgency parameter - trade faster if the stock is moving
   against you (higher urgency = more front-loaded).
 """
 
@@ -132,7 +132,7 @@ def twap_schedule(
     avg_daily_volume: int = 50_000_000,
 ) -> ExecutionSchedule:
     """
-    TWAP — Time-Weighted Average Price execution schedule.
+    TWAP - Time-Weighted Average Price execution schedule.
 
     Splits the order equally across all time intervals.
     Each interval gets: total_shares / n_intervals shares.
@@ -190,7 +190,7 @@ def vwap_schedule(
     volume_profile: np.ndarray | None = None,
 ) -> ExecutionSchedule:
     """
-    VWAP — Volume-Weighted Average Price execution schedule.
+    VWAP - Volume-Weighted Average Price execution schedule.
 
     Distributes shares proportional to expected intraday volume.
     More shares at open and close (high volume), fewer at midday.
@@ -213,7 +213,7 @@ def vwap_schedule(
     times = _interval_times(n_intervals)
     target_shares = (profile * total_shares).round().astype(int)
 
-    # Fix rounding — ensure total matches exactly
+    # Fix rounding - ensure total matches exactly
     diff = total_shares - int(target_shares.sum())
     target_shares[np.argmax(profile)] += diff
 
@@ -377,7 +377,7 @@ def analyse_execution(
     elif is_bps < 20:
         interp = f"Good execution. IS of {is_bps:.1f} bps is within normal range."
     else:
-        interp = f"High implementation shortfall of {is_bps:.1f} bps — consider lower urgency or smaller order size."
+        interp = f"High implementation shortfall of {is_bps:.1f} bps - consider lower urgency or smaller order size."
 
     return ExecutionAnalysis(
         algorithm=schedule.algorithm,

@@ -1,5 +1,5 @@
 """
-AEQUITAS — Full price history endpoint.
+AEQUITAS - Full price history endpoint.
 
 GET /api/v1/history/{ticker}?range=1mo|6mo|1y|5y|max
 
@@ -8,7 +8,7 @@ ticker has never been seen before, or if existing history doesn't
 go back far enough for the requested range (e.g. someone previously
 ingested only 1y but now wants "max" / full history since listing).
 
-This is the backbone of the Dashboard's price explorer — a person
+This is the backbone of the Dashboard's price explorer - a person
 can search any valid ticker and immediately see its full chart
 history without ever calling POST /ingest manually.
 """
@@ -117,15 +117,15 @@ async def get_price_history(
 
     If the ticker has never been ingested, or the requested range
     needs more history than currently stored, automatically fetches
-    the complete history from yFinance (period=max) — covering every
+    the complete history from yFinance (period=max) - covering every
     trading day since the stock's listing.
 
     range:
-      1mo  — last ~21 trading days
-      6mo  — last ~126 trading days
-      1y   — last ~252 trading days
-      5y   — last ~1260 trading days
-      max  — entire available history (back to IPO/listing)
+      1mo  - last ~21 trading days
+      6mo  - last ~126 trading days
+      1y   - last ~252 trading days
+      5y   - last ~1260 trading days
+      max  - entire available history (back to IPO/listing)
     """
     ticker = ticker.upper()
 

@@ -1,5 +1,5 @@
 """
-AEQUITAS — Application configuration.
+AEQUITAS - Application configuration.
 
 All settings are read from environment variables (or .env file).
 Import the `settings` singleton anywhere in the app:

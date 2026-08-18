@@ -1,4 +1,4 @@
-// AEQUITAS — C++ feature-engineering kernels
+// AEQUITAS - C++ feature-engineering kernels
 //
 // Rolling-window and exponential-smoothing primitives used by the
 // feature pipeline (backend/app/algorithms/ml/features.py), exposed
@@ -52,7 +52,7 @@ Arr make_out(py::ssize_t n, double** ptr) {
 //
 // NaN-aware to match pandas' default rolling().mean(): a window emits a
 // value only once all `w` observations in it are non-NaN. A naive sliding
-// sum can't do this — once a NaN is added, `sum += NaN` contaminates every
+// sum can't do this - once a NaN is added, `sum += NaN` contaminates every
 // future value, even after the NaN has scrolled out of the window (adding
 // x[i], then later subtracting the same NaN back out, is still NaN + NaN).
 // pandas instead re-derives validity per window, so a stale NaN is

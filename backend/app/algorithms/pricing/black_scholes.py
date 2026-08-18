@@ -1,8 +1,8 @@
 """
-AEQUITAS — Black-Scholes options pricing engine.
+AEQUITAS - Black-Scholes options pricing engine.
 
 Implements the Black-Scholes-Merton model for European options.
-All functions are pure — no side effects, no database calls.
+All functions are pure - no side effects, no database calls.
 This makes them trivial to test and reuse across the system.
 
 Reference: Black, F. & Scholes, M. (1973). "The Pricing of Options
@@ -26,15 +26,15 @@ class BlackScholesInputs:
     """
     Validated inputs for the Black-Scholes model.
 
-    frozen=True makes this immutable — inputs can't be changed
+    frozen=True makes this immutable - inputs can't be changed
     after creation, preventing subtle bugs.
     """
 
-    spot: float  # S — current stock price
-    strike: float  # K — option strike price
-    rate: float  # r — risk-free interest rate (annualised, e.g. 0.05 = 5%)
-    volatility: float  # σ — implied volatility (annualised, e.g. 0.20 = 20%)
-    expiry: float  # T — time to expiry in years (e.g. 0.25 = 3 months)
+    spot: float  # S - current stock price
+    strike: float  # K - option strike price
+    rate: float  # r - risk-free interest rate (annualised, e.g. 0.05 = 5%)
+    volatility: float  # σ - implied volatility (annualised, e.g. 0.20 = 20%)
+    expiry: float  # T - time to expiry in years (e.g. 0.25 = 3 months)
     option_type: OptionType = OptionType.CALL
 
     def __post_init__(self) -> None:
@@ -58,11 +58,11 @@ class Greeks:
     to a 1-unit change in the corresponding input.
     """
 
-    delta: float  # ΔC/ΔS — price change per $1 move in spot
-    gamma: float  # Δ²C/ΔS² — delta change per $1 move in spot
-    vega: float  # ΔC/Δσ — price change per 1% move in volatility
-    theta: float  # ΔC/ΔT — price change per 1 calendar day
-    rho: float  # ΔC/Δr — price change per 1% move in interest rate
+    delta: float  # ΔC/ΔS - price change per $1 move in spot
+    gamma: float  # Δ²C/ΔS² - delta change per $1 move in spot
+    vega: float  # ΔC/Δσ - price change per 1% move in volatility
+    theta: float  # ΔC/ΔT - price change per 1 calendar day
+    rho: float  # ΔC/Δr - price change per 1% move in interest rate
 
 
 @dataclass(frozen=True)
@@ -78,7 +78,7 @@ class BlackScholesResult:
 
 def _compute_d1_d2(inputs: BlackScholesInputs) -> tuple[float, float]:
     """
-    Compute d1 and d2 — the core of Black-Scholes.
+    Compute d1 and d2 - the core of Black-Scholes.
 
     d1 = [ln(S/K) + (r + σ²/2)·T] / (σ·√T)
     d2 = d1 - σ·√T
@@ -212,7 +212,7 @@ def implied_volatility(
         # vega in actual units (not per 1%)
         vega_actual = result.greeks.vega * 100
         if abs(vega_actual) < 1e-10:
-            raise ValueError("Vega too small — option may be deep ITM/OTM")
+            raise ValueError("Vega too small - option may be deep ITM/OTM")
 
         # Newton-Raphson update
         sigma = sigma - price_diff / vega_actual

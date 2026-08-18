@@ -1,5 +1,5 @@
 """
-AEQUITAS — XGBoost return forecaster with SHAP explanations.
+AEQUITAS - XGBoost return forecaster with SHAP explanations.
 
 Predicts next-day log returns using technical features.
 SHAP values explain which features drove each prediction.
@@ -11,7 +11,7 @@ XGBoost works by:
   4. Repeating steps 2-3 for n_estimators trees
 
 Each tree corrects the previous ensemble's mistakes.
-This is gradient boosting — gradient descent in function space.
+This is gradient boosting - gradient descent in function space.
 """
 
 from dataclasses import dataclass
@@ -63,7 +63,7 @@ def train_forecaster(
     Train XGBoost forecaster with time-series cross-validation.
 
     We use TimeSeriesSplit instead of random train/test split.
-    Why? Random splitting leaks future data into training —
+    Why? Random splitting leaks future data into training -
     a form of lookahead bias. TimeSeriesSplit always trains on
     the past and validates on the future.
 
@@ -81,13 +81,13 @@ def train_forecaster(
     X = feat_df[ML_FEATURE_COLS].values
     y = feat_df["target_1d"].values
 
-    # Temporal train/test split — never shuffle time-series data
+    # Temporal train/test split - never shuffle time-series data
     split_idx = int(len(X) * (1 - test_size))
     X_train, X_test = X[:split_idx], X[split_idx:]
     y_train, y_test = y[:split_idx], y[split_idx:]
 
     # XGBoost hyperparameters
-    # These are reasonable defaults — in production you'd tune with Optuna
+    # These are reasonable defaults - in production you'd tune with Optuna
     model = xgb.XGBRegressor(
         n_estimators=300,
         learning_rate=0.05,
@@ -165,7 +165,7 @@ def forecast_next_day(
     predicted = float(trained.model.predict(X_latest)[0])
 
     # SHAP explanation for this prediction
-    # TreeExplainer is exact for XGBoost — O(TLD) complexity
+    # TreeExplainer is exact for XGBoost - O(TLD) complexity
     # where T=trees, L=leaves, D=depth
     explainer = shap.TreeExplainer(trained.model)
     shap_vals = explainer.shap_values(X_latest)[0]  # shape: (n_features,)

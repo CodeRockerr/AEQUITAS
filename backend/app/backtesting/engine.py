@@ -1,5 +1,5 @@
 """
-AEQUITAS — Vectorised backtesting engine.
+AEQUITAS - Vectorised backtesting engine.
 
 Wraps vectorbt for fast strategy backtesting and
 computes a comprehensive tearsheet of performance metrics.
@@ -65,7 +65,7 @@ def run_momentum_backtest(
     Entry: RSI crosses below oversold threshold → buy
     Exit:  RSI crosses above overbought threshold → sell
 
-    Uses vectorised operations — no Python loops over time.
+    Uses vectorised operations - no Python loops over time.
     """
     # Compute RSI
     delta = close.diff()
@@ -167,11 +167,11 @@ def _simulate_strategy(
     """
     Simulate a long-only strategy given entry/exit signals.
 
-    Vectorised implementation — no loops over time steps.
+    Vectorised implementation - no loops over time steps.
     Assumes:
       - Fully invested when in position (no partial sizing)
       - No transaction costs (add in production)
-      - Prices at next bar's open (not same-bar — avoids lookahead)
+      - Prices at next bar's open (not same-bar - avoids lookahead)
     """
     close = close.dropna()
     entries = entries.reindex(close.index).fillna(False)

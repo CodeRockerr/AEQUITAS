@@ -1,10 +1,10 @@
 """
-AEQUITAS — LangGraph agent node functions.
+AEQUITAS - LangGraph agent node functions.
 
 Each node is a pure async function that receives the current
 state, does work, and returns a dict of state updates.
 
-Uses Groq API (free tier) for LLM calls — llama-3.3-70b-versatile.
+Uses Groq API (free tier) for LLM calls - llama-3.3-70b-versatile.
 Groq is ~10x faster than OpenAI and has a generous free tier.
 """
 
@@ -37,7 +37,7 @@ async def _llm(
       - Quality: comparable to GPT-4o for structured financial text
 
     The system/user message format is identical to OpenAI and
-    Anthropic — easy to swap providers later.
+    Anthropic - easy to swap providers later.
     """
     client = _get_groq_client()
 
@@ -56,7 +56,7 @@ async def _llm(
 
 async def research_node(state: dict, db) -> dict:  # type: ignore[type-arg]
     """
-    Research node — gathers company context from stored documents.
+    Research node - gathers company context from stored documents.
 
     Retrieves relevant SEC filing chunks for the ticker using
     full-text search, then asks the LLM to summarise the company.
@@ -119,8 +119,8 @@ async def research_node(state: dict, db) -> dict:  # type: ignore[type-arg]
             max_tokens=512,
         )
     else:
-        summary = f"{ticker} — no company information available in the database."
-        errors.append("No company data found — run /ingest and /info endpoints first")
+        summary = f"{ticker} - no company information available in the database."
+        errors.append("No company data found - run /ingest and /info endpoints first")
 
     log.info("research_node_complete", ticker=ticker, n_chunks=len(chunks))
 
@@ -134,7 +134,7 @@ async def research_node(state: dict, db) -> dict:  # type: ignore[type-arg]
 
 async def quant_node(state: dict, db) -> dict:  # type: ignore[type-arg]
     """
-    Quant node — pulls live quantitative signals for the ticker.
+    Quant node - pulls live quantitative signals for the ticker.
 
     Calls our own algorithm layer:
       - HMM regime detection
@@ -165,7 +165,7 @@ async def quant_node(state: dict, db) -> dict:  # type: ignore[type-arg]
     rows = result.all()
 
     if len(rows) < 60:
-        errors.append(f"Insufficient price data for {ticker} — need 60+ bars")
+        errors.append(f"Insufficient price data for {ticker} - need 60+ bars")
         return {
             "current_regime": "Unknown",
             "regime_confidence": 0.0,
@@ -254,7 +254,7 @@ async def quant_node(state: dict, db) -> dict:  # type: ignore[type-arg]
 
 async def thesis_node(state: dict) -> dict:  # type: ignore[type-arg]
     """
-    Thesis node — synthesises a trade thesis using Groq LLM.
+    Thesis node - synthesises a trade thesis using Groq LLM.
 
     Combines fundamental research with quantitative signals
     into a structured investment thesis.
@@ -330,7 +330,7 @@ async def thesis_node(state: dict) -> dict:  # type: ignore[type-arg]
 
 async def critic_node(state: dict) -> dict:  # type: ignore[type-arg]
     """
-    Critic node — evaluates the thesis and decides if revision needed.
+    Critic node - evaluates the thesis and decides if revision needed.
     """
     ticker = state.get("ticker", "")
     thesis = state.get("thesis", "")

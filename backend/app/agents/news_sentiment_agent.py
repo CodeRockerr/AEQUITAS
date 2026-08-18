@@ -1,13 +1,13 @@
 """
-AEQUITAS — News sentiment agent.
+AEQUITAS - News sentiment agent.
 
 Pulls recent news for a ticker from Finnhub, scores sentiment using
 an LLM (since Finnhub's pre-computed sentiment endpoint requires a
 paid plan), and detects whether sentiment is improving, worsening,
 or stable compared to the prior period.
 
-This is a standalone agent — not part of the LangGraph research
-graph — but its output is structured to be easily fed into the
+This is a standalone agent - not part of the LangGraph research
+graph - but its output is structured to be easily fed into the
 research agent's thesis generation as supplementary context.
 """
 
@@ -62,7 +62,7 @@ async def run_news_sentiment_agent(ticker: str, llm_call) -> NewsSentimentResult
     Args:
         ticker: stock symbol
         llm_call: async function (system: str, user: str, max_tokens: int) -> str
-                  — injected so this module doesn't depend on a specific
+                  - injected so this module doesn't depend on a specific
                   LLM provider implementation (Groq, in our case)
     """
     ticker = ticker.upper()
@@ -156,7 +156,7 @@ def _parse_llm_response(text: str) -> tuple[str, float, str, float, list[str], s
     """
     Parse the structured LLM response into typed fields.
 
-    Falls back to safe defaults if any field is malformed —
+    Falls back to safe defaults if any field is malformed -
     LLMs occasionally deviate from the requested format.
     """
     sentiment = "neutral"

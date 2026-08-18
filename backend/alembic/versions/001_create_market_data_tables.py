@@ -47,7 +47,7 @@ def upgrade() -> None:
     # On TimescaleDB-enabled infra (e.g. the timescale/timescaledb-ha
     # image) this partitions ohlcv_bars by 'time' in weekly chunks.
     # On plain Postgres (e.g. Neon) the extension is not available, so
-    # this block is skipped and ohlcv_bars remains a regular table —
+    # this block is skipped and ohlcv_bars remains a regular table -
     # the (ticker, time) index below covers our query patterns either way.
     op.execute(
         """

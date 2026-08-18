@@ -1,5 +1,5 @@
 """
-AEQUITAS — Portfolio construction agent.
+AEQUITAS - Portfolio construction agent.
 
 Given a list of tickers, this agent:
   1. Runs cointegration tests on all pairs (flags tradeable pairs)
@@ -9,7 +9,7 @@ Given a list of tickers, this agent:
      the allocation rationale, diversification quality, and risks
 
 This reuses your existing portfolio optimiser and pairs trading
-algorithms — the agent's job is orchestration and narrative, not
+algorithms - the agent's job is orchestration and narrative, not
 reimplementing math that already exists and is already tested.
 """
 
@@ -115,12 +115,12 @@ async def run_portfolio_agent(
             max_sharpe_ratio=0.0,
             min_variance_vol=0.0,
             cointegrated_pairs=[],
-            thesis="Insufficient data to construct a portfolio — need at least 2 tickers with 60+ days of price history.",
+            thesis="Insufficient data to construct a portfolio - need at least 2 tickers with 60+ days of price history.",
             errors=errors,
         )
 
     # Align all series to common dates, build a raw returns matrix
-    # (shape: [n_days, n_assets]) — this is what maximum_sharpe() and
+    # (shape: [n_days, n_assets]) - this is what maximum_sharpe() and
     # minimum_variance() expect as input; they compute mean/cov internally.
     price_df = pd.DataFrame(price_series)[valid_tickers].dropna()
     returns_df = price_df.pct_change().dropna()
@@ -137,7 +137,7 @@ async def run_portfolio_agent(
     allocations = []
     if max_sharpe and min_var:
         # weights are returned as list[float] in the same order as
-        # `tickers` was passed in (valid_tickers here) — zip, don't .get()
+        # `tickers` was passed in (valid_tickers here) - zip, don't .get()
         max_sharpe_by_ticker = dict(zip(valid_tickers, max_sharpe.weights, strict=True))
         min_var_by_ticker = dict(zip(valid_tickers, min_var.weights, strict=True))
 

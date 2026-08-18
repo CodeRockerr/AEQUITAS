@@ -1,5 +1,5 @@
 """
-AEQUITAS — VaR and CVaR risk engine.
+AEQUITAS - VaR and CVaR risk engine.
 """
 
 import math
@@ -30,7 +30,7 @@ def historical_var(
 
     Sorts past returns worst-to-best, takes the (1-confidence) percentile
     as VaR, and the mean of all losses beyond that as CVaR.
-    No distribution assumption — captures real fat tails and skewness.
+    No distribution assumption - captures real fat tails and skewness.
     """
     if len(returns) < 30:
         raise ValueError(f"Need at least 30 return observations, got {len(returns)}.")
@@ -109,7 +109,7 @@ def montecarlo_var(
     Monte Carlo VaR.
 
     Simulates n_simulations random return paths using estimated
-    mean and volatility. seed=42 ensures reproducibility —
+    mean and volatility. seed=42 ensures reproducibility -
     required for audit trails in financial systems.
     """
     rng = np.random.default_rng(seed)

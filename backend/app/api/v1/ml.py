@@ -1,5 +1,5 @@
 """
-AEQUITAS — ML model API endpoints.
+AEQUITAS - ML model API endpoints.
 
 POST /api/v1/ml/regime/{ticker}     detect market regimes
 POST /api/v1/ml/forecast/{ticker}   forecast next-day return
@@ -121,7 +121,7 @@ async def detect_market_regime(
     df = await _fetch_ohlcv_df(db, ticker, min_rows=100)
 
     # Compute log returns as a pandas Series first, then drop NaN,
-    # then convert to numpy — avoids calling .dropna() on NDArray
+    # then convert to numpy - avoids calling .dropna() on NDArray
     close_series: pd.Series = df["close"]
     lratio_series: pd.Series = close_series / close_series.shift(1)
     log_returns_series: pd.Series = lratio_series.apply(np.log).dropna()

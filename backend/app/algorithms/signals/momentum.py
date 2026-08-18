@@ -1,5 +1,5 @@
 """
-AEQUITAS — Momentum and mean-reversion signals.
+AEQUITAS - Momentum and mean-reversion signals.
 
 Implements RSI, MACD, and Bollinger Band signals.
 All signals return a value in [-1, +1]:
@@ -7,7 +7,7 @@ All signals return a value in [-1, +1]:
   -1 = strong sell
    0 = neutral
 
-This normalised scale makes signals composable —
+This normalised scale makes signals composable -
 you can average multiple signals into a combined signal.
 """
 
@@ -60,9 +60,9 @@ def rsi_signal(
     signal = -(rsi - 50) / 50
 
     if rsi > overbought:
-        interp = f"Overbought (RSI={rsi:.1f}) — bearish mean-reversion signal"
+        interp = f"Overbought (RSI={rsi:.1f}) - bearish mean-reversion signal"
     elif rsi < oversold:
-        interp = f"Oversold (RSI={rsi:.1f}) — bullish mean-reversion signal"
+        interp = f"Oversold (RSI={rsi:.1f}) - bullish mean-reversion signal"
     else:
         interp = f"Neutral (RSI={rsi:.1f})"
 
@@ -161,9 +161,9 @@ def bollinger_signal(
     )
 
     if pct_b > 1.0:
-        interp = f"Above upper band (%B={pct_b:.2f}) — overbought"
+        interp = f"Above upper band (%B={pct_b:.2f}) - overbought"
     elif pct_b < 0.0:
-        interp = f"Below lower band (%B={pct_b:.2f}) — oversold"
+        interp = f"Below lower band (%B={pct_b:.2f}) - oversold"
     else:
         interp = f"Within bands (%B={pct_b:.2f}, width={bb_width_pct:.1f}%)"
 

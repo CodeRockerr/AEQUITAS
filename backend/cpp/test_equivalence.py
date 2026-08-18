@@ -36,7 +36,7 @@ results.append(check("atr(14) vs repo _atr", ck.atr(high, low, close, 14),
 
 # Leading-NaN case: return_1d-style series (np.log(close/close.shift(1)))
 # has a single NaN at index 0. This is what vol_10d/21d/63d roll over in
-# the full pipeline — pandas "forgets" a stale NaN once it exits the
+# the full pipeline - pandas "forgets" a stale NaN once it exits the
 # window; a naive sliding sum does not. Regression coverage for that fix.
 ret = np.log(close[1:] / close[:-1])
 ret = np.concatenate([[np.nan], ret])

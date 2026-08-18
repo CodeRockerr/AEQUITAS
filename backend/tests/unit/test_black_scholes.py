@@ -1,5 +1,5 @@
 """
-AEQUITAS — Unit tests for Black-Scholes pricing engine.
+AEQUITAS - Unit tests for Black-Scholes pricing engine.
 
 We verify against known analytical values.
 The at-the-money call test uses a well-known approximation:
@@ -140,14 +140,14 @@ def test_gamma_positive(atm_call: BlackScholesInputs) -> None:
 
 @pytest.mark.unit
 def test_vega_positive(atm_call: BlackScholesInputs) -> None:
-    """Vega is always positive — higher vol = higher option price."""
+    """Vega is always positive - higher vol = higher option price."""
     result = price(atm_call)
     assert result.greeks.vega > 0
 
 
 @pytest.mark.unit
 def test_theta_negative_call(atm_call: BlackScholesInputs) -> None:
-    """Theta is negative — options lose value as time passes (time decay)."""
+    """Theta is negative - options lose value as time passes (time decay)."""
     result = price(atm_call)
     assert result.greeks.theta < 0
 

@@ -1,5 +1,5 @@
 """
-AEQUITAS — Equivalence test for the C++-backed feature pipeline.
+AEQUITAS - Equivalence test for the C++-backed feature pipeline.
 
 Verifies compute_features_cpp() (features_cpp.py, C++20 kernels) produces
 the same DataFrame as compute_features() (features.py, pandas) on
@@ -21,7 +21,7 @@ pytestmark = pytest.mark.skipif(
 
 @pytest.fixture
 def sample_ohlcv() -> pd.DataFrame:
-    """2,000 days of synthetic OHLCV data — long enough to exercise every
+    """2,000 days of synthetic OHLCV data - long enough to exercise every
     rolling window (up to 252 days) well past its warm-up period."""
     rng = np.random.default_rng(7)
     n = 2_000

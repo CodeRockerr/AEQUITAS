@@ -7,7 +7,7 @@ name: Keep Warm
 
 on:
   schedule:
-    # Every 10 minutes. Note: GitHub cron is best-effort — runs can be
+    # Every 10 minutes. Note: GitHub cron is best-effort - runs can be
     # delayed a few minutes under load, which is fine for this purpose.
     - cron: "*/10 * * * *"
   # Allow manual runs from the Actions tab (useful for testing)

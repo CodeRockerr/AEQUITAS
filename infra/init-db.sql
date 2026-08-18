@@ -1,7 +1,7 @@
 -- ═══════════════════════════════════════════════════════════════
---  AEQUITAS — Database initialisation
+--  AEQUITAS - Database initialisation
 --  Runs automatically on first Postgres container start.
---  DO NOT put sensitive data here — this is committed to Git.
+--  DO NOT put sensitive data here - this is committed to Git.
 -- ═══════════════════════════════════════════════════════════════
 
 -- TimescaleDB: turns Postgres into a time-series database.

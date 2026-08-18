@@ -1,5 +1,5 @@
 """
-AEQUITAS — Unit tests for HMM regime detector.
+AEQUITAS - Unit tests for HMM regime detector.
 """
 
 import numpy as np

@@ -1,4 +1,4 @@
-"""Alembic environment — connects migrations to our app config and models."""
+"""Alembic environment - connects migrations to our app config and models."""
 
 import asyncio
 from logging.config import fileConfig

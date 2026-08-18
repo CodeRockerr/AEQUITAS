@@ -1,5 +1,5 @@
 """
-AEQUITAS — Pairs trading with cointegration and Kalman filter.
+AEQUITAS - Pairs trading with cointegration and Kalman filter.
 """
 
 from dataclasses import dataclass

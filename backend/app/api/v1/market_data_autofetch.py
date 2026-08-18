@@ -1,9 +1,9 @@
 """
-AEQUITAS — Auto-ingest helper for the real-time feature.
+AEQUITAS - Auto-ingest helper for the real-time feature.
 
 Before this, a person had to manually POST /ingest before any
 endpoint would return data for a ticker. This helper makes that
-automatic — if a ticker has no data (or stale data), it's fetched
+automatic - if a ticker has no data (or stale data), it's fetched
 transparently on first request.
 
 Use this inside any endpoint that needs guaranteed fresh data

@@ -1,5 +1,5 @@
 """
-AEQUITAS — Market data ORM models.
+AEQUITAS - Market data ORM models.
 
 Concepts:
   - ORM (Object Relational Mapper): lets you work with database
@@ -10,7 +10,7 @@ Concepts:
     then call create_hypertable() to make it time-partitioned.
     Queries that filter by time become dramatically faster.
 
-  - OHLCV: Open, High, Low, Close, Volume — the standard format
+  - OHLCV: Open, High, Low, Close, Volume - the standard format
     for financial time-series data. Every candlestick chart you've
     ever seen is built from OHLCV data.
 """
@@ -60,7 +60,7 @@ class OHLCVBar(Base):
         String(10), primary_key=True, nullable=False, default="1d"
     )
 
-    # OHLCV — precision=12, scale=6 handles prices from $0.0001 to $999999
+    # OHLCV - precision=12, scale=6 handles prices from $0.0001 to $999999
     open: Mapped[Decimal] = mapped_column(Numeric(12, 6), nullable=False)
     high: Mapped[Decimal] = mapped_column(Numeric(12, 6), nullable=False)
     low: Mapped[Decimal] = mapped_column(Numeric(12, 6), nullable=False)
@@ -71,7 +71,7 @@ class OHLCVBar(Base):
     # "get all AAPL bars between date A and date B" fast
     __table_args__ = (
         Index("ix_ohlcv_ticker_time", "ticker", "time"),
-        {"comment": "TimescaleDB hypertable — partitioned by time column"},
+        {"comment": "TimescaleDB hypertable - partitioned by time column"},
     )
 
     def __repr__(self) -> str:
@@ -80,7 +80,7 @@ class OHLCVBar(Base):
 
 class CompanyInfo(Base):
     """
-    Static company metadata — updated infrequently.
+    Static company metadata - updated infrequently.
     Separate table from OHLCV to avoid repeating strings millions of times.
     """
 

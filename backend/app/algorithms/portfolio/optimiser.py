@@ -1,5 +1,5 @@
 """
-AEQUITAS — Mean-variance portfolio optimiser.
+AEQUITAS - Mean-variance portfolio optimiser.
 
 Markowitz (1952): for a given expected return, there exists a portfolio
 with minimum variance. The set of all such portfolios is the efficient frontier.
@@ -119,7 +119,7 @@ def minimum_variance(
     """
     Find the minimum variance portfolio.
 
-    The leftmost point on the efficient frontier — lowest possible
+    The leftmost point on the efficient frontier - lowest possible
     risk regardless of return. Useful for risk-averse allocators.
     """
     n_assets = returns_matrix.shape[1]

@@ -1,5 +1,5 @@
 """
-AEQUITAS — Extended agentic features API endpoints.
+AEQUITAS - Extended agentic features API endpoints.
 
 POST /api/v1/agents/news-sentiment/{ticker}      news sentiment agent
 POST /api/v1/agents/earnings/{ticker}             earnings analysis agent
@@ -137,7 +137,7 @@ async def earnings_analysis(ticker: str) -> EarningsAnalysisOut:
     sentiment classification.
 
     history_available=false means Finnhub's free-tier earnings
-    calendar had no data for this ticker — the analysis still runs,
+    calendar had no data for this ticker - the analysis still runs,
     grounded in news + fundamentals instead.
     """
     try:

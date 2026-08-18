@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "aequitas-backend"
 version = "0.5.0"
-description = "AEQUITAS — Agentic Quant Research Platform"
+description = "AEQUITAS - Agentic Quant Research Platform"
 requires-python = ">=3.13"
 
 dependencies = [

@@ -1,5 +1,5 @@
 """
-AEQUITAS — HMM market regime detector.
+AEQUITAS - HMM market regime detector.
 
 Uses a Gaussian Hidden Markov Model to classify market into
 latent regimes from daily return observations.
@@ -12,7 +12,7 @@ The model learns three things from data:
 After fitting, we use Viterbi decoding to find the most likely
 sequence of regimes given the observed returns.
 
-Library: hmmlearn — a scikit-learn compatible HMM implementation.
+Library: hmmlearn - a scikit-learn compatible HMM implementation.
 """
 
 from dataclasses import dataclass
@@ -106,10 +106,10 @@ def fit_regime_model(
     # ── Label regimes by emission characteristics ─────────────
     means = model.means_.flatten()
 
-    # covars_ can be None before fitting — guard against it
+    # covars_ can be None before fitting - guard against it
     covars = model.covars_
     if covars is None:
-        raise ValueError("HMM fitting failed — covars_ is None")
+        raise ValueError("HMM fitting failed - covars_ is None")
 
     sorted_by_mean = np.argsort(means)
 
@@ -152,7 +152,7 @@ def detect_regimes(
     # Viterbi decoding
     _, raw_states = fitted.model.decode(X, algorithm="viterbi")
 
-    # Posterior probabilities — shape (n_samples, n_states)
+    # Posterior probabilities - shape (n_samples, n_states)
     raw_probs = fitted.model.predict_proba(X)
 
     # Map raw states → named Regime enum values
