@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCard } from "@/components/ui/StatCard";
+import { CardGrid } from "@/components/ui/CardGrid";
 import { Badge } from "@/components/ui/Badge";
 import { Spinner } from "@/components/ui/Spinner";
 import { CandlestickChart } from "@/components/charts/CandlestickChart";
@@ -330,14 +331,7 @@ export default function DashboardPage() {
           </div>
         ) : (
           <>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
-                gap: "12px",
-                marginBottom: "32px",
-              }}
-            >
+            <CardGrid minWidth="160px" gap="12px" style={{ marginBottom: "32px" }}>
               <StatCard
                 label="Regime"
                 value={regime?.current_regime ?? "N/A"}
@@ -387,16 +381,9 @@ export default function DashboardPage() {
                 sub="XGBoost model"
                 delay={180}
               />
-            </div>
+            </CardGrid>
 
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-                gap: "16px",
-                marginBottom: "16px",
-              }}
-            >
+            <CardGrid minWidth="320px" gap="16px" style={{ marginBottom: "16px" }}>
               {signals && (
                 <div
                   className="card animate-fade-up"
@@ -623,7 +610,7 @@ export default function DashboardPage() {
                   </div>
                 </div>
               )}
-            </div>
+            </CardGrid>
 
             {regime && (
               <div

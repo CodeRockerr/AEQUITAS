@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCard } from "@/components/ui/StatCard";
+import { CardGrid } from "@/components/ui/CardGrid";
 import { Badge } from "@/components/ui/Badge";
 import { Spinner } from "@/components/ui/Spinner";
 import {
@@ -231,14 +232,7 @@ export default function FactorsPage() {
 
         {factorResult && !factorLoading && (
           <>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
-                gap: "12px",
-                marginBottom: "20px",
-              }}
-            >
+            <CardGrid minWidth="150px" gap="12px" style={{ marginBottom: "20px" }}>
               <StatCard
                 label="Alpha (annualised)"
                 value={`${factorResult.alpha_pct >= 0 ? "+" : ""}${factorResult.alpha_pct.toFixed(2)}%`}
@@ -280,7 +274,7 @@ export default function FactorsPage() {
                 sub="Variance explained"
                 delay={240}
               />
-            </div>
+            </CardGrid>
 
             <div
               className="card animate-fade-up"
@@ -507,14 +501,7 @@ export default function FactorsPage() {
 
         {execResult && !execLoading && (
           <>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
-                gap: "12px",
-                marginBottom: "20px",
-              }}
-            >
+            <CardGrid minWidth="150px" gap="12px" style={{ marginBottom: "20px" }}>
               <StatCard
                 label="Algorithm"
                 value={execResult.algorithm}
@@ -541,7 +528,7 @@ export default function FactorsPage() {
                 value={execResult.expected_completion}
                 delay={240}
               />
-            </div>
+            </CardGrid>
 
             <div className="card animate-fade-up" style={{ padding: "24px" }}>
               <div
@@ -590,7 +577,10 @@ export default function FactorsPage() {
                       borderRadius: "var(--radius-md)",
                       fontFamily: "var(--font-mono)",
                       fontSize: "11px",
+                      color: "var(--text-primary)",
                     }}
+                    itemStyle={{ color: "var(--text-primary)" }}
+                    labelStyle={{ color: "var(--text-secondary)" }}
                     formatter={(v: number) => [
                       `${v.toLocaleString()} shares`,
                       "",

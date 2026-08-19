@@ -11,6 +11,7 @@
 import { Fragment, useEffect, useRef, useState } from "react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCard } from "@/components/ui/StatCard";
+import { CardGrid } from "@/components/ui/CardGrid";
 import { Badge } from "@/components/ui/Badge";
 import { Spinner } from "@/components/ui/Spinner";
 import { SectionHeader } from "@/components/ui/SectionHeader";
@@ -571,13 +572,7 @@ export default function PerformancePage() {
             )}
 
             {/* Headline stats */}
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-                gap: 16,
-              }}
-            >
+            <CardGrid minWidth="180px" gap="16px">
               <StatCard
                 label="Dataset"
                 value={data.rows.toLocaleString()}
@@ -641,7 +636,7 @@ export default function PerformancePage() {
                   delay={260}
                 />
               )}
-            </div>
+            </CardGrid>
 
             {/* Speedup chart: falls back to plain pandas timings when the
                 C++ extension isn't built, instead of disappearing entirely.
@@ -679,7 +674,10 @@ export default function PerformancePage() {
                       border: "1px solid var(--border-subtle)",
                       borderRadius: 8,
                       fontSize: 12,
+                      color: "var(--text-primary)",
                     }}
+                    itemStyle={{ color: "var(--text-primary)" }}
+                    labelStyle={{ color: "var(--text-secondary)" }}
                   />
                   <Bar dataKey="value" name="value" radius={[6, 6, 0, 0]} {...BAR_ANIM}>
                     <LabelList
@@ -787,7 +785,10 @@ export default function PerformancePage() {
                       border: "1px solid var(--border-subtle)",
                       borderRadius: 8,
                       fontSize: 12,
+                      color: "var(--text-primary)",
                     }}
+                    itemStyle={{ color: "var(--text-primary)" }}
+                    labelStyle={{ color: "var(--text-secondary)" }}
                   />
                   <Bar dataKey="numpy" name="NumPy" fill="var(--accent-amber)" radius={[6, 6, 0, 0]} {...BAR_ANIM}>
                     <LabelList
@@ -851,7 +852,10 @@ export default function PerformancePage() {
                       border: "1px solid var(--border-subtle)",
                       borderRadius: 8,
                       fontSize: 12,
+                      color: "var(--text-primary)",
                     }}
+                    itemStyle={{ color: "var(--text-primary)" }}
+                    labelStyle={{ color: "var(--text-secondary)" }}
                   />
                   <Bar dataKey="pandas" name="pandas" fill="var(--accent-blue)" radius={[6, 6, 0, 0]} {...BAR_ANIM} />
                   <Bar dataKey="numpy" name="NumPy" fill="var(--accent-amber)" radius={[6, 6, 0, 0]} {...BAR_ANIM} />
@@ -1249,13 +1253,7 @@ export default function PerformancePage() {
               transition: "opacity var(--duration-base) var(--ease-out)",
             }}
           >
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-                gap: 16,
-              }}
-            >
+            <CardGrid minWidth="180px" gap="16px">
               <StatCard
                 label="Dataset"
                 value={pipelineData.rows.toLocaleString()}
@@ -1287,7 +1285,7 @@ export default function PerformancePage() {
                 sub="across all 19 features + target"
                 accent="neutral"
               />
-            </div>
+            </CardGrid>
 
             {pipelineData.cpp_available && (
               <div style={{ height: 180 }}>
@@ -1314,7 +1312,10 @@ export default function PerformancePage() {
                         border: "1px solid var(--border-subtle)",
                         borderRadius: 8,
                         fontSize: 12,
+                        color: "var(--text-primary)",
                       }}
+                      itemStyle={{ color: "var(--text-primary)" }}
+                      labelStyle={{ color: "var(--text-secondary)" }}
                     />
                     <Bar dataKey="ms" radius={[0, 6, 6, 0]} {...BAR_ANIM}>
                       <LabelList
@@ -1427,13 +1428,7 @@ export default function PerformancePage() {
               transition: "opacity var(--duration-base) var(--ease-out)",
             }}
           >
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-                gap: 16,
-              }}
-            >
+            <CardGrid minWidth="180px" gap="16px">
               <StatCard
                 label="Real history used"
                 value={`${backtestData.n_bars.toLocaleString()} bars`}
@@ -1471,7 +1466,7 @@ export default function PerformancePage() {
                   backtestData.backtest_results_match === false ? "red" : "neutral"
                 }
               />
-            </div>
+            </CardGrid>
 
             <p style={{ fontSize: 12, color: "var(--text-secondary)", maxWidth: 720 }}>
               {backtestData.note} No transaction costs modeled - see
@@ -1585,13 +1580,7 @@ export default function PerformancePage() {
               transition: "opacity var(--duration-base) var(--ease-out)",
             }}
           >
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-                gap: 16,
-              }}
-            >
+            <CardGrid minWidth="180px" gap="16px">
               <StatCard
                 label="Workload"
                 value={`${parallelData.symbols} × ${parallelData.rows.toLocaleString()}`}
@@ -1617,7 +1606,7 @@ export default function PerformancePage() {
                 sub={`GIL released, ${parallelData.cpu_count} cores on this host`}
                 accent="green"
               />
-            </div>
+            </CardGrid>
 
             {parallelData.cpp_available && (
               <div style={{ height: 220 }}>
@@ -1650,7 +1639,10 @@ export default function PerformancePage() {
                         border: "1px solid var(--border-subtle)",
                         borderRadius: 8,
                         fontSize: 12,
+                        color: "var(--text-primary)",
                       }}
+                      itemStyle={{ color: "var(--text-primary)" }}
+                      labelStyle={{ color: "var(--text-secondary)" }}
                     />
                     <Bar dataKey="ms" radius={[6, 6, 0, 0]} {...BAR_ANIM}>
                       <LabelList
@@ -1746,7 +1738,10 @@ export default function PerformancePage() {
                       border: "1px solid var(--border-subtle)",
                       borderRadius: 8,
                       fontSize: 12,
+                      color: "var(--text-primary)",
                     }}
+                    itemStyle={{ color: "var(--text-primary)" }}
+                    labelStyle={{ color: "var(--text-secondary)" }}
                   />
                   <Bar dataKey="ms" radius={[6, 6, 0, 0]} {...BAR_ANIM}>
                     <LabelList

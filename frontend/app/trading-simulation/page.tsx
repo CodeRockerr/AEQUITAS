@@ -12,6 +12,7 @@
 import { useEffect, useRef, useState } from "react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCard } from "@/components/ui/StatCard";
+import { CardGrid } from "@/components/ui/CardGrid";
 import { Badge } from "@/components/ui/Badge";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { QRFooter } from "@/components/ui/QRFooter";
@@ -164,13 +165,7 @@ export default function TradingSimulationPage() {
 
         {liveTicks.length > 0 && (
           <div style={{ display: "grid", gap: 24 }}>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-                gap: 16,
-              }}
-            >
+            <CardGrid minWidth="180px" gap="16px">
               <StatCard
                 label="Decisions made"
                 value={liveTotals.count.toLocaleString()}
@@ -193,7 +188,7 @@ export default function TradingSimulationPage() {
                 sub="faster time-to-decision"
                 accent="green"
               />
-            </div>
+            </CardGrid>
 
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
               <thead>
