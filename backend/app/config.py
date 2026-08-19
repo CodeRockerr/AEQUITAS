@@ -38,6 +38,7 @@ class Settings(BaseSettings):
     # ── App ───────────────────────────────────────────────────
     app_env: str = Field(default="development")
     app_debug: bool = Field(default=True)
+    app_version: str = Field(default="0.13.0")
     secret_key: str = Field(default="change-me-in-production")
     log_level: str = Field(default="INFO")
 
@@ -55,10 +56,24 @@ class Settings(BaseSettings):
     anthropic_api_key: str = Field(default="")
     anthropic_model: str = Field(default="claude-sonnet-4-20250514")
     groq_api_key: str = Field(default="")
-    groq_model: str = Field(default="llama-3.3-70b-versatile")
+    groq_model: str = Field(default="openai/gpt-oss-120b")
 
     # ── Market data ───────────────────────────────────────────
     polygon_api_key: str = Field(default="")
+
+    # ── SEC EDGAR ─────────────────────────────────────────────
+    # EDGAR requires no API key, but its documented policy requires the
+    # User-Agent to contain a real contact - literally "Sample Company
+    # Name AdminContact@<sample company domain>.com" - not just a
+    # descriptive string. Verified empirically: an otherwise-identical
+    # request with no email-shaped string in the UA gets 403'd; add one
+    # and it's a plain 200. This default is a placeholder - replace with
+    # a real, monitored address before relying on this in production, so
+    # SEC has an actual way to reach you if this traffic ever needs
+    # attention. https://www.sec.gov/os/webmaster-faq#developers
+    edgar_user_agent: str = Field(
+        default="AEQUITAS Research Platform admin@aequitas.dev"
+    )
 
     # ── Reddit ────────────────────────────────────────────────
     reddit_client_id: str = Field(default="")

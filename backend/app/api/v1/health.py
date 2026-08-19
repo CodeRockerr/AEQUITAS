@@ -57,7 +57,7 @@ async def health_check() -> HealthResponse:
     return HealthResponse(
         status="ok",
         env=settings.app_env,
-        version="0.1.0",
+        version=settings.app_version,
         uptime_seconds=round(time.time() - _start_time, 2),
         timestamp=datetime.now(UTC).isoformat(),
     )
