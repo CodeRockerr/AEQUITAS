@@ -4,7 +4,7 @@ AEQUITAS - LangGraph agent node functions.
 Each node is a pure async function that receives the current
 state, does work, and returns a dict of state updates.
 
-Uses Groq API (free tier) for LLM calls - llama-3.3-70b-versatile.
+Uses Groq API (free tier) for LLM calls - openai/gpt-oss-120b.
 Groq is ~10x faster than OpenAI and has a generous free tier.
 """
 
@@ -31,7 +31,7 @@ async def _llm(
     """
     Call Groq API and return the text response.
 
-    Model: llama-3.3-70b-versatile
+    Model: openai/gpt-oss-120b
       - Free tier: 6,000 requests/day, 500,000 tokens/minute
       - Speed: ~700 tokens/second (much faster than OpenAI)
       - Quality: comparable to GPT-4o for structured financial text
@@ -68,11 +68,15 @@ async def research_node(state: dict, db) -> dict:  # type: ignore[type-arg]
 
     from sqlalchemy import select
 
+    from app.data.ingestion.edgar import ensure_filings_ingested
+    from app.data.ingestion.market_data import ensure_company_info
     from app.data.vector.store import (
         get_all_chunks_for_ticker,
         retrieve_relevant_chunks,
     )
     from app.models.market_data import CompanyInfo
+
+    await ensure_filings_ingested(db, ticker)
 
     query = f"{ticker} business revenue growth risk factors earnings"
     chunks = await retrieve_relevant_chunks(db, ticker, query, n_chunks=5)
@@ -81,6 +85,8 @@ async def research_node(state: dict, db) -> dict:  # type: ignore[type-arg]
         chunks = await get_all_chunks_for_ticker(db, ticker, limit=5)
 
     citations = [f"{c['source']} (relevance: {c['relevance']})" for c in chunks]
+
+    await ensure_company_info(db, ticker)
 
     result = await db.execute(
         select(CompanyInfo).where(CompanyInfo.ticker == ticker.upper())
@@ -155,7 +161,10 @@ async def quant_node(state: dict, db) -> dict:  # type: ignore[type-arg]
     from app.algorithms.ml.regime_detector import detect_regimes, fit_regime_model
     from app.algorithms.risk.var_cvar import historical_var
     from app.algorithms.signals.momentum import combined_signal
+    from app.data.ingestion.market_data import ensure_min_bars
     from app.models.market_data import OHLCVBar
+
+    await ensure_min_bars(db, ticker, min_rows=60)
 
     result = await db.execute(
         select(OHLCVBar.time, OHLCVBar.close)
