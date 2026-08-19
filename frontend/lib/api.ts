@@ -18,6 +18,21 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+// File uploads use FormData, which the browser must set its own
+// multipart Content-Type + boundary for - apiFetch always forces
+// application/json, so uploads need their own fetch without that header.
+async function apiUpload<T>(path: string, formData: FormData): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: "POST",
+    body: formData,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(err.detail ?? `API error: ${res.status}`);
+  }
+  return res.json() as Promise<T>;
+}
+
 // ── Health ───────────────────────────────────────────────────
 export interface HealthResponse {
   status: string;
@@ -112,6 +127,8 @@ export interface BacktestResponse {
   start_date: string;
   end_date: string;
   n_bars: number;
+  equity_curve: number[];
+  benchmark_equity_curve: number[];
   summary: string;
 }
 
@@ -372,6 +389,22 @@ export const extendedAgentsApi = {
     apiFetch<NewsSentimentResponse>(`/api/v1/agents/news-sentiment/${ticker}`, {
       method: "POST",
     }),
+  newsSentimentFromText: (ticker: string, text: string) =>
+    apiFetch<NewsSentimentResponse>(
+      "/api/v1/agents/news-sentiment/analyze-text",
+      {
+        method: "POST",
+        body: JSON.stringify({ ticker, text }),
+      },
+    ),
+  extractTextFromFile: (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return apiUpload<{ text: string; truncated: boolean }>(
+      "/api/v1/agents/news-sentiment/extract-text",
+      formData,
+    );
+  },
   earnings: (ticker: string) =>
     apiFetch<EarningsAnalysisResponse>(`/api/v1/agents/earnings/${ticker}`, {
       method: "POST",

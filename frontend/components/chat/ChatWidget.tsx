@@ -9,6 +9,7 @@
  */
 
 import { useState, useRef, useEffect } from "react";
+import { Markdown } from "@/components/ui/Markdown";
 
 interface Message {
   role: "user" | "assistant";
@@ -41,6 +42,55 @@ const TOOL_LABELS: Record<string, string> = {
   get_factor_model: "◇ Factor Model",
 };
 
+// Draggable floating widget - the button (and panel, via its header) can be
+// dragged anywhere on screen. Position is anchored to the button's
+// top-left corner and persisted so it survives reloads.
+const BUTTON_SIZE = 52;
+const PANEL_W = 380;
+const PANEL_H = 560;
+const DRAG_MARGIN = 8;
+const POS_STORAGE_KEY = "aequitas-chat-widget-pos";
+
+interface Pos {
+  x: number;
+  y: number;
+}
+
+function clampToViewport(x: number, y: number): Pos {
+  const maxX = window.innerWidth - BUTTON_SIZE - DRAG_MARGIN;
+  const maxY = window.innerHeight - BUTTON_SIZE - DRAG_MARGIN;
+  return {
+    x: Math.min(Math.max(x, DRAG_MARGIN), Math.max(maxX, DRAG_MARGIN)),
+    y: Math.min(Math.max(y, DRAG_MARGIN), Math.max(maxY, DRAG_MARGIN)),
+  };
+}
+
+/** Anchors a floating panel to the button's position, flipping above/below
+ * and left/right as needed so it never renders off-screen. */
+function computeAnchoredStyle(
+  pos: Pos,
+  width: number,
+  height: number,
+): { top: number; left: number } {
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const gap = 12;
+
+  const spaceAbove = pos.y - gap;
+  const spaceBelow = vh - (pos.y + BUTTON_SIZE) - gap;
+  const openUpward = spaceAbove >= height || spaceAbove > spaceBelow;
+
+  const top = openUpward
+    ? Math.max(DRAG_MARGIN, pos.y - height - gap)
+    : Math.min(pos.y + BUTTON_SIZE + gap, vh - height - DRAG_MARGIN);
+
+  let left = pos.x;
+  if (left + width > vw - DRAG_MARGIN) left = vw - width - DRAG_MARGIN;
+  if (left < DRAG_MARGIN) left = DRAG_MARGIN;
+
+  return { top, left };
+}
+
 export function ChatWidget() {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
@@ -56,6 +106,81 @@ export function ChatWidget() {
   const [showGreeting, setShowGreeting] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Drag-anywhere position. Starts null (no window on the server) and is
+  // set on mount from localStorage or a default bottom-right corner.
+  const [pos, setPos] = useState<Pos | null>(null);
+  const [dragging, setDragging] = useState(false);
+  const posRef = useRef<Pos | null>(null);
+  const draggingRef = useRef(false);
+  const movedRef = useRef(false);
+  const dragStartRef = useRef({ pointerX: 0, pointerY: 0, posX: 0, posY: 0 });
+
+  useEffect(() => {
+    posRef.current = pos;
+  }, [pos]);
+
+  useEffect(() => {
+    const saved = localStorage.getItem(POS_STORAGE_KEY);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved) as Pos;
+        setPos(clampToViewport(parsed.x, parsed.y));
+        return;
+      } catch {
+        // fall through to default
+      }
+    }
+    setPos(
+      clampToViewport(
+        window.innerWidth - BUTTON_SIZE - 24,
+        window.innerHeight - BUTTON_SIZE - 24,
+      ),
+    );
+  }, []);
+
+  useEffect(() => {
+    function onResize() {
+      setPos((p) => (p ? clampToViewport(p.x, p.y) : p));
+    }
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  function startDrag(e: React.PointerEvent) {
+    if (!posRef.current) return;
+    (e.currentTarget as Element).setPointerCapture(e.pointerId);
+    draggingRef.current = true;
+    movedRef.current = false;
+    setDragging(true);
+    dragStartRef.current = {
+      pointerX: e.clientX,
+      pointerY: e.clientY,
+      posX: posRef.current.x,
+      posY: posRef.current.y,
+    };
+  }
+
+  function onDragMove(e: React.PointerEvent) {
+    if (!draggingRef.current) return;
+    const dx = e.clientX - dragStartRef.current.pointerX;
+    const dy = e.clientY - dragStartRef.current.pointerY;
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) movedRef.current = true;
+    setPos(
+      clampToViewport(
+        dragStartRef.current.posX + dx,
+        dragStartRef.current.posY + dy,
+      ),
+    );
+  }
+
+  function endDrag() {
+    draggingRef.current = false;
+    setDragging(false);
+    if (posRef.current) {
+      localStorage.setItem(POS_STORAGE_KEY, JSON.stringify(posRef.current));
+    }
+  }
 
   useEffect(() => {
     const showTimer = setTimeout(() => setShowGreeting(true), 1500);
@@ -141,6 +266,11 @@ export function ChatWidget() {
     }
   }
 
+  if (!pos) return null;
+
+  const greetingPos = computeAnchoredStyle(pos, 240, 110);
+  const panelPos = computeAnchoredStyle(pos, PANEL_W, PANEL_H);
+
   return (
     <>
       {/* Proactive greeting bubble */}
@@ -152,8 +282,8 @@ export function ChatWidget() {
           }}
           style={{
             position: "fixed",
-            bottom: "88px",
-            right: "24px",
+            top: `${greetingPos.top}px`,
+            left: `${greetingPos.left}px`,
             width: "240px",
             background: "var(--bg-surface)",
             border: "1px solid var(--border-subtle)",
@@ -210,30 +340,41 @@ export function ChatWidget() {
         </div>
       )}
 
-      {/* Floating button */}
+      {/* Floating button - draggable anywhere on screen */}
       <button
         onClick={() => {
+          if (movedRef.current) {
+            movedRef.current = false;
+            return;
+          }
           setOpen((o) => !o);
           setShowGreeting(false);
         }}
-        aria-label="Chat with the AEQUITAS AI analyst"
-        title="Chat with the AEQUITAS AI analyst"
+        onPointerDown={startDrag}
+        onPointerMove={onDragMove}
+        onPointerUp={endDrag}
+        onPointerCancel={endDrag}
+        onDragStart={(e) => e.preventDefault()}
+        aria-label="Chat with the AEQUITAS AI analyst (drag to reposition)"
+        title="Chat with the AEQUITAS AI analyst - drag to move"
         style={{
           position: "fixed",
-          bottom: "24px",
-          right: "24px",
+          top: `${pos.y}px`,
+          left: `${pos.x}px`,
           width: "52px",
           height: "52px",
           borderRadius: "50%",
           background: open ? "var(--bg-elevated)" : "var(--text-primary)",
           border: "1px solid var(--border-subtle)",
-          cursor: "pointer",
+          cursor: dragging ? "grabbing" : "pointer",
+          touchAction: "none",
+          userSelect: "none",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           zIndex: 9998,
           boxShadow: "0 4px 24px rgba(0,0,0,0.3)",
-          transition: "all 0.2s ease",
+          transition: dragging ? "none" : "all 0.2s ease",
           color: open ? "var(--text-primary)" : "var(--text-inverse)",
         }}
       >
@@ -279,10 +420,10 @@ export function ChatWidget() {
         <div
           style={{
             position: "fixed",
-            bottom: "88px",
-            right: "24px",
-            width: "380px",
-            height: "560px",
+            top: `${panelPos.top}px`,
+            left: `${panelPos.left}px`,
+            width: `${PANEL_W}px`,
+            height: `${PANEL_H}px`,
             background: "var(--bg-surface)",
             border: "1px solid var(--border-subtle)",
             borderRadius: "16px",
@@ -293,8 +434,14 @@ export function ChatWidget() {
             overflow: "hidden",
           }}
         >
-          {/* Header */}
+          {/* Header - drag handle to reposition the whole widget */}
           <div
+            onPointerDown={startDrag}
+            onPointerMove={onDragMove}
+            onPointerUp={endDrag}
+            onPointerCancel={endDrag}
+            onDragStart={(e) => e.preventDefault()}
+            title="Drag to move"
             style={{
               padding: "16px 20px",
               borderBottom: "1px solid var(--border-subtle)",
@@ -302,6 +449,9 @@ export function ChatWidget() {
               display: "flex",
               alignItems: "center",
               gap: "10px",
+              cursor: dragging ? "grabbing" : "grab",
+              touchAction: "none",
+              userSelect: "none",
             }}
           >
             <span style={{ fontSize: "18px" }}>◈</span>
@@ -400,7 +550,7 @@ export function ChatWidget() {
                         ? "var(--text-inverse)"
                         : "var(--text-secondary)",
                     lineHeight: "1.6",
-                    whiteSpace: "pre-wrap",
+                    whiteSpace: msg.role === "user" ? "pre-wrap" : "normal",
                   }}
                 >
                   {msg.loading ? (
@@ -424,8 +574,10 @@ export function ChatWidget() {
                         />
                       ))}
                     </span>
-                  ) : (
+                  ) : msg.role === "user" ? (
                     msg.content
+                  ) : (
+                    <Markdown fontSize="13px">{msg.content}</Markdown>
                   )}
                 </div>
               </div>
