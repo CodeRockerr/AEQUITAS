@@ -20,6 +20,7 @@ from app.algorithms.execution.twap_vwap import (
     vwap_schedule,
 )
 from app.algorithms.signals.factor_model import run_factor_model
+from app.data.ingestion.market_data import ensure_min_bars
 from app.db import get_db
 from app.models.market_data import OHLCVBar
 
@@ -70,6 +71,8 @@ async def _get_log_returns(
     ticker: str,
     min_rows: int = 60,
 ) -> pd.Series:
+    await ensure_min_bars(db, ticker, min_rows)
+
     result = await db.execute(
         select(OHLCVBar.time, OHLCVBar.close)
         .where(OHLCVBar.ticker == ticker.upper(), OHLCVBar.interval == "1d")

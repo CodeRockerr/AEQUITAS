@@ -49,6 +49,9 @@ class BacktestResult:
     start_date: str
     end_date: str
     n_bars: int
+    # Equity curves (portfolio value per day, starting at initial_capital)
+    equity_curve: list[float]
+    benchmark_equity_curve: list[float]
 
 
 def run_momentum_backtest(
@@ -201,6 +204,7 @@ def _simulate_strategy(
 
     # Buy-and-hold benchmark
     bh_returns = (float(close.iloc[-1]) / float(close.iloc[0])) - 1
+    bh_curve = initial_capital * (1 + daily_returns).cumprod()
 
     # ── Performance metrics ───────────────────────────────────
     total_return = (float(portfolio.iloc[-1]) / initial_capital) - 1
@@ -267,4 +271,6 @@ def _simulate_strategy(
         start_date=start_date,
         end_date=end_date,
         n_bars=n,
+        equity_curve=[round(v, 2) for v in portfolio.tolist()],
+        benchmark_equity_curve=[round(v, 2) for v in bh_curve.tolist()],
     )
