@@ -18,7 +18,7 @@ AEQUITAS is a personal research platform built to be both a serious portfolio pr
 
 Everything in this repo is real, working, and tested. No mocked endpoints, no placeholder data.
 
-**Live demo:** [aequitas-three.vercel.app](https://aequitas-three.vercel.app)
+**Live demo:** [aequitas-platform.vercel.app](https://aequitas-platform.vercel.app)
 **API docs:** [aequitas-api.onrender.com/docs](https://aequitas-api.onrender.com/docs)
 
 ---
