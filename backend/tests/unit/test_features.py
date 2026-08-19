@@ -1,5 +1,5 @@
 """
-AEQUITAS — Unit tests for feature engineering pipeline.
+AEQUITAS - Unit tests for feature engineering pipeline.
 """
 
 import numpy as np

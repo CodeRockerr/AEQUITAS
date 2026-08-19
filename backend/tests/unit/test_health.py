@@ -1,5 +1,5 @@
 """
-AEQUITAS — Unit tests for the health endpoints.
+AEQUITAS - Unit tests for the health endpoints.
 
 Test naming convention: test_<what>_<expected_outcome>
 e.g. test_health_returns_ok_status
@@ -76,7 +76,7 @@ def test_docs_disabled_outside_development(client: TestClient) -> None:
     """Swagger /docs should be disabled in non-development environments.
 
     In CI, APP_ENV=test so /docs returns 404.
-    This is intentional — never expose API docs in production.
+    This is intentional - never expose API docs in production.
     """
     from app.config import settings
 

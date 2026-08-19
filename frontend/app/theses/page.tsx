@@ -3,10 +3,12 @@
 import { useState } from "react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCard } from "@/components/ui/StatCard";
+import { CardGrid } from "@/components/ui/CardGrid";
 import { Badge } from "@/components/ui/Badge";
 import { Spinner } from "@/components/ui/Spinner";
 import { AgentProgress } from "@/components/ui/AgentProgress";
 import { InsightStrip } from "@/components/ui/InsightStrip";
+import { Markdown } from "@/components/ui/Markdown";
 import { agentsApi, type ResearchResponse } from "@/lib/api";
 
 const TICKERS = ["AAPL", "MSFT", "SPY", "NVDA", "TSLA", "AMZN"];
@@ -166,14 +168,7 @@ export default function ThesesPage() {
         {result && !loading && (
           <>
             {/* Header stats */}
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
-                gap: "12px",
-                marginBottom: "24px",
-              }}
-            >
+            <CardGrid minWidth="150px" gap="12px" style={{ marginBottom: "24px" }}>
               <StatCard
                 label="Sentiment"
                 value={result.thesis_sentiment.toUpperCase()}
@@ -217,7 +212,7 @@ export default function ThesesPage() {
                 sub="Critic loops"
                 delay={300}
               />
-            </div>
+            </CardGrid>
 
             {/* Insight strip: Observed / Why it matters / Next action */}
             <InsightStrip {...buildInsight(result)} />
@@ -292,17 +287,7 @@ export default function ThesesPage() {
                   >
                     {result.ticker}: Investment Thesis
                   </div>
-                  <div
-                    style={{
-                      fontFamily: "var(--font-sans)",
-                      fontSize: "14px",
-                      color: "var(--text-secondary)",
-                      lineHeight: "1.8",
-                      whiteSpace: "pre-wrap",
-                    }}
-                  >
-                    {result.final_thesis}
-                  </div>
+                  <Markdown>{result.final_thesis}</Markdown>
                 </div>
 
                 {/* Sidebar */}
@@ -487,17 +472,7 @@ export default function ThesesPage() {
                     {result.revision_count !== 1 ? "s" : ""}
                   </Badge>
                 </div>
-                <div
-                  style={{
-                    fontFamily: "var(--font-sans)",
-                    fontSize: "14px",
-                    color: "var(--text-secondary)",
-                    lineHeight: "1.8",
-                    whiteSpace: "pre-wrap",
-                  }}
-                >
-                  {result.critique}
-                </div>
+                <Markdown>{result.critique}</Markdown>
               </div>
             )}
 

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { CardGrid } from "@/components/ui/CardGrid";
 import { Badge } from "@/components/ui/Badge";
 import { Spinner } from "@/components/ui/Spinner";
 import {
@@ -243,14 +244,7 @@ export default function RiskPage() {
         {Object.keys(varResults).length > 0 && !loadingVar && (
           <>
             {/* Stats row */}
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
-                gap: "12px",
-                marginBottom: "20px",
-              }}
-            >
+            <CardGrid minWidth="180px" gap="12px" style={{ marginBottom: "20px" }}>
               {METHODS.map(
                 (m) =>
                   varResults[m] && (
@@ -284,7 +278,7 @@ export default function RiskPage() {
                     </div>
                   ),
               )}
-            </div>
+            </CardGrid>
 
             {/* Chart + interpretation */}
             <div
@@ -340,8 +334,14 @@ export default function RiskPage() {
                         borderRadius: "var(--radius-md)",
                         fontFamily: "var(--font-mono)",
                         fontSize: "11px",
+                        color: "var(--text-primary)",
                       }}
-                      formatter={(v: number) => [`$${v.toLocaleString()}`, ""]}
+                      itemStyle={{ color: "var(--text-primary)" }}
+                      labelStyle={{ color: "var(--text-secondary)" }}
+                      formatter={(v: number, name: string) => [
+                        `$${v.toLocaleString()}`,
+                        name,
+                      ]}
                     />
                     <Bar dataKey="var" name="VaR" radius={[3, 3, 0, 0]}>
                       {varChartData.map((_, i) => (

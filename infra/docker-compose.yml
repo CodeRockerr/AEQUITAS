@@ -1,5 +1,5 @@
 # ═══════════════════════════════════════════════════════════════
-#  AEQUITAS — Docker Compose (local development)
+#  AEQUITAS - Docker Compose (local development)
 #  Start everything: make dev
 #  Stop everything:  make down
 # ═══════════════════════════════════════════════════════════════
@@ -58,7 +58,7 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - ../backend/app:/app/app  # live reload — code changes reflect instantly
+      - ../backend/app:/app/app  # live reload - code changes reflect instantly
     depends_on:
       db:
         condition: service_healthy   # wait for Postgres to be ready

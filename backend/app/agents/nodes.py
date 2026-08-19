@@ -1,10 +1,10 @@
 """
-AEQUITAS — LangGraph agent node functions.
+AEQUITAS - LangGraph agent node functions.
 
 Each node is a pure async function that receives the current
 state, does work, and returns a dict of state updates.
 
-Uses Groq API (free tier) for LLM calls — llama-3.3-70b-versatile.
+Uses Groq API (free tier) for LLM calls - openai/gpt-oss-120b.
 Groq is ~10x faster than OpenAI and has a generous free tier.
 """
 
@@ -31,13 +31,13 @@ async def _llm(
     """
     Call Groq API and return the text response.
 
-    Model: llama-3.3-70b-versatile
+    Model: openai/gpt-oss-120b
       - Free tier: 6,000 requests/day, 500,000 tokens/minute
       - Speed: ~700 tokens/second (much faster than OpenAI)
       - Quality: comparable to GPT-4o for structured financial text
 
     The system/user message format is identical to OpenAI and
-    Anthropic — easy to swap providers later.
+    Anthropic - easy to swap providers later.
     """
     client = _get_groq_client()
 
@@ -56,7 +56,7 @@ async def _llm(
 
 async def research_node(state: dict, db) -> dict:  # type: ignore[type-arg]
     """
-    Research node — gathers company context from stored documents.
+    Research node - gathers company context from stored documents.
 
     Retrieves relevant SEC filing chunks for the ticker using
     full-text search, then asks the LLM to summarise the company.
@@ -68,11 +68,15 @@ async def research_node(state: dict, db) -> dict:  # type: ignore[type-arg]
 
     from sqlalchemy import select
 
+    from app.data.ingestion.edgar import ensure_filings_ingested
+    from app.data.ingestion.market_data import ensure_company_info
     from app.data.vector.store import (
         get_all_chunks_for_ticker,
         retrieve_relevant_chunks,
     )
     from app.models.market_data import CompanyInfo
+
+    await ensure_filings_ingested(db, ticker)
 
     query = f"{ticker} business revenue growth risk factors earnings"
     chunks = await retrieve_relevant_chunks(db, ticker, query, n_chunks=5)
@@ -81,6 +85,8 @@ async def research_node(state: dict, db) -> dict:  # type: ignore[type-arg]
         chunks = await get_all_chunks_for_ticker(db, ticker, limit=5)
 
     citations = [f"{c['source']} (relevance: {c['relevance']})" for c in chunks]
+
+    await ensure_company_info(db, ticker)
 
     result = await db.execute(
         select(CompanyInfo).where(CompanyInfo.ticker == ticker.upper())
@@ -119,8 +125,8 @@ async def research_node(state: dict, db) -> dict:  # type: ignore[type-arg]
             max_tokens=512,
         )
     else:
-        summary = f"{ticker} — no company information available in the database."
-        errors.append("No company data found — run /ingest and /info endpoints first")
+        summary = f"{ticker} - no company information available in the database."
+        errors.append("No company data found - run /ingest and /info endpoints first")
 
     log.info("research_node_complete", ticker=ticker, n_chunks=len(chunks))
 
@@ -134,7 +140,7 @@ async def research_node(state: dict, db) -> dict:  # type: ignore[type-arg]
 
 async def quant_node(state: dict, db) -> dict:  # type: ignore[type-arg]
     """
-    Quant node — pulls live quantitative signals for the ticker.
+    Quant node - pulls live quantitative signals for the ticker.
 
     Calls our own algorithm layer:
       - HMM regime detection
@@ -155,7 +161,10 @@ async def quant_node(state: dict, db) -> dict:  # type: ignore[type-arg]
     from app.algorithms.ml.regime_detector import detect_regimes, fit_regime_model
     from app.algorithms.risk.var_cvar import historical_var
     from app.algorithms.signals.momentum import combined_signal
+    from app.data.ingestion.market_data import ensure_min_bars
     from app.models.market_data import OHLCVBar
+
+    await ensure_min_bars(db, ticker, min_rows=60)
 
     result = await db.execute(
         select(OHLCVBar.time, OHLCVBar.close)
@@ -165,7 +174,7 @@ async def quant_node(state: dict, db) -> dict:  # type: ignore[type-arg]
     rows = result.all()
 
     if len(rows) < 60:
-        errors.append(f"Insufficient price data for {ticker} — need 60+ bars")
+        errors.append(f"Insufficient price data for {ticker} - need 60+ bars")
         return {
             "current_regime": "Unknown",
             "regime_confidence": 0.0,
@@ -254,7 +263,7 @@ async def quant_node(state: dict, db) -> dict:  # type: ignore[type-arg]
 
 async def thesis_node(state: dict) -> dict:  # type: ignore[type-arg]
     """
-    Thesis node — synthesises a trade thesis using Groq LLM.
+    Thesis node - synthesises a trade thesis using Groq LLM.
 
     Combines fundamental research with quantitative signals
     into a structured investment thesis.
@@ -330,7 +339,7 @@ async def thesis_node(state: dict) -> dict:  # type: ignore[type-arg]
 
 async def critic_node(state: dict) -> dict:  # type: ignore[type-arg]
     """
-    Critic node — evaluates the thesis and decides if revision needed.
+    Critic node - evaluates the thesis and decides if revision needed.
     """
     ticker = state.get("ticker", "")
     thesis = state.get("thesis", "")

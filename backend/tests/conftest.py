@@ -1,5 +1,5 @@
 """
-AEQUITAS — Pytest configuration and shared fixtures.
+AEQUITAS - Pytest configuration and shared fixtures.
 
 conftest.py is automatically loaded by Pytest before any tests run.
 Fixtures defined here are available in ALL test files without importing.
@@ -45,7 +45,7 @@ def client(app):  # noqa: ANN201
     """
     Synchronous test client.
 
-    Use for straightforward endpoint tests — the vast majority.
+    Use for straightforward endpoint tests - the vast majority.
     TestClient runs the ASGI app in-process, no server needed.
     """
     with TestClient(app) as c:

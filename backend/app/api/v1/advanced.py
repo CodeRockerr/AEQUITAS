@@ -1,5 +1,5 @@
 """
-AEQUITAS — Advanced algorithms API endpoints.
+AEQUITAS - Advanced algorithms API endpoints.
 
 POST /api/v1/factor-model/{ticker}     Fama-French 3-factor analysis
 POST /api/v1/execution/{ticker}/twap   TWAP execution schedule
@@ -20,6 +20,7 @@ from app.algorithms.execution.twap_vwap import (
     vwap_schedule,
 )
 from app.algorithms.signals.factor_model import run_factor_model
+from app.data.ingestion.market_data import ensure_min_bars
 from app.db import get_db
 from app.models.market_data import OHLCVBar
 
@@ -70,6 +71,8 @@ async def _get_log_returns(
     ticker: str,
     min_rows: int = 60,
 ) -> pd.Series:
+    await ensure_min_bars(db, ticker, min_rows)
+
     result = await db.execute(
         select(OHLCVBar.time, OHLCVBar.close)
         .where(OHLCVBar.ticker == ticker.upper(), OHLCVBar.interval == "1d")
@@ -146,7 +149,7 @@ async def factor_model(
 async def twap_endpoint(
     ticker: str, req: ExecutionRequest
 ) -> ExecutionScheduleResponse:
-    """TWAP — equal shares per time interval."""
+    """TWAP - equal shares per time interval."""
     s = twap_schedule(
         ticker.upper(), req.total_shares, req.n_intervals, req.avg_daily_volume
     )
@@ -167,7 +170,7 @@ async def twap_endpoint(
 async def vwap_endpoint(
     ticker: str, req: ExecutionRequest
 ) -> ExecutionScheduleResponse:
-    """VWAP — shares proportional to U-shaped intraday volume profile."""
+    """VWAP - shares proportional to U-shaped intraday volume profile."""
     s = vwap_schedule(
         ticker.upper(), req.total_shares, req.n_intervals, req.avg_daily_volume
     )
@@ -184,7 +187,7 @@ async def vwap_endpoint(
 
 @router.post("/api/v1/execution/{ticker}/is", response_model=ExecutionScheduleResponse)
 async def is_endpoint(ticker: str, req: ExecutionRequest) -> ExecutionScheduleResponse:
-    """Implementation Shortfall — urgency-parameterised front/back loading."""
+    """Implementation Shortfall - urgency-parameterised front/back loading."""
     s = implementation_shortfall_schedule(
         ticker.upper(),
         req.total_shares,

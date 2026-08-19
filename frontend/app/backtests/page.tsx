@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCard } from "@/components/ui/StatCard";
+import { CardGrid } from "@/components/ui/CardGrid";
 import { Spinner } from "@/components/ui/Spinner";
 import { backtestApi, type BacktestResponse } from "@/lib/api";
 import {
@@ -30,25 +31,16 @@ const STRATEGIES = [
   },
 ];
 
-// Synthetic equity curve from backtest stats
+// Real day-by-day equity curve as computed by the backtest engine
+// (portfolio value under the strategy vs. plain buy-and-hold).
 function buildEquityCurve(
   result: BacktestResponse,
 ): { day: number; value: number; bh: number }[] {
-  const n = Math.min(result.n_bars, 252);
-  const dailyReturn = result.annual_return_pct / 100 / 252;
-  const bhDaily = result.benchmark_return_pct / 100 / n;
-  const data = [];
-  let val = 10000;
-  let bh = 10000;
-  for (let i = 0; i < n; i++) {
-    const noise =
-      ((Math.random() - 0.5) * (result.annual_volatility_pct / 100) * 10000) /
-      Math.sqrt(252);
-    val = val * (1 + dailyReturn) + noise;
-    bh = bh * (1 + bhDaily);
-    data.push({ day: i + 1, value: Math.round(val), bh: Math.round(bh) });
-  }
-  return data;
+  return result.equity_curve.map((value, i) => ({
+    day: i + 1,
+    value,
+    bh: result.benchmark_equity_curve[i],
+  }));
 }
 
 export default function BacktestsPage() {
@@ -71,10 +63,6 @@ export default function BacktestsPage() {
     }
   }
 
-  // buildEquityCurve uses Math.random() internally, so it must be memoized
-  // on `result` rather than recomputed on every render; otherwise clicking
-  // a ticker/strategy pill (without re-running) regenerates the noise and
-  // the plotted curve visibly changes shape for the same displayed result.
   const equityCurve = useMemo(
     () => (result ? buildEquityCurve(result) : []),
     [result],
@@ -227,14 +215,7 @@ export default function BacktestsPage() {
         {result && !loading && (
           <>
             {/* Stats */}
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
-                gap: "12px",
-                marginBottom: "24px",
-              }}
-            >
+            <CardGrid minWidth="150px" gap="12px" style={{ marginBottom: "24px" }}>
               <StatCard
                 label="Total Return"
                 value={`${result.total_return_pct >= 0 ? "+" : ""}${result.total_return_pct.toFixed(1)}%`}
@@ -277,7 +258,7 @@ export default function BacktestsPage() {
                 value={result.sortino_ratio.toFixed(2)}
                 delay={300}
               />
-            </div>
+            </CardGrid>
 
             {/* Equity curve */}
             <div
@@ -376,10 +357,9 @@ export default function BacktestsPage() {
                 >
                   <XAxis dataKey="day" hide />
                   <YAxis
-                    tickFormatter={(value: number) => [
-                      `$${value.toLocaleString()}`,
-                      "",
-                    ]}
+                    tickFormatter={(value: number) =>
+                      `$${value.toLocaleString()}`
+                    }
                     tick={{
                       fontFamily: "var(--font-mono)",
                       fontSize: 10,
@@ -387,7 +367,7 @@ export default function BacktestsPage() {
                     }}
                     axisLine={false}
                     tickLine={false}
-                    width={44}
+                    width={60}
                   />
                   <Tooltip
                     contentStyle={{
@@ -396,10 +376,13 @@ export default function BacktestsPage() {
                       borderRadius: "var(--radius-md)",
                       fontFamily: "var(--font-mono)",
                       fontSize: "11px",
+                      color: "var(--text-primary)",
                     }}
-                    formatter={(value: number) => [
+                    itemStyle={{ color: "var(--text-primary)" }}
+                    labelStyle={{ color: "var(--text-secondary)" }}
+                    formatter={(value: number, name: string) => [
                       `$${value.toLocaleString()}`,
-                      "",
+                      name,
                     ]}
                     labelFormatter={(l: number) => `Day ${l}`}
                   />
@@ -411,6 +394,7 @@ export default function BacktestsPage() {
                   <Line
                     type="monotone"
                     dataKey="bh"
+                    name="Buy & Hold"
                     stroke="var(--border-strong)"
                     strokeWidth={1}
                     dot={false}
@@ -419,6 +403,7 @@ export default function BacktestsPage() {
                   <Line
                     type="monotone"
                     dataKey="value"
+                    name="Strategy"
                     stroke="var(--accent-green)"
                     strokeWidth={2}
                     dot={false}

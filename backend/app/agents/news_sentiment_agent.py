@@ -1,13 +1,13 @@
 """
-AEQUITAS — News sentiment agent.
+AEQUITAS - News sentiment agent.
 
 Pulls recent news for a ticker from Finnhub, scores sentiment using
 an LLM (since Finnhub's pre-computed sentiment endpoint requires a
 paid plan), and detects whether sentiment is improving, worsening,
 or stable compared to the prior period.
 
-This is a standalone agent — not part of the LangGraph research
-graph — but its output is structured to be easily fed into the
+This is a standalone agent - not part of the LangGraph research
+graph - but its output is structured to be easily fed into the
 research agent's thesis generation as supplementary context.
 """
 
@@ -21,6 +21,7 @@ from app.services.finnhub_client import get_company_news, get_news_sentiment
 log = structlog.get_logger()
 
 MAX_HEADLINES_FOR_LLM = 15
+MAX_DOCUMENT_CHARS = 12_000
 
 
 @dataclass
@@ -62,7 +63,7 @@ async def run_news_sentiment_agent(ticker: str, llm_call) -> NewsSentimentResult
     Args:
         ticker: stock symbol
         llm_call: async function (system: str, user: str, max_tokens: int) -> str
-                  — injected so this module doesn't depend on a specific
+                  - injected so this module doesn't depend on a specific
                   LLM provider implementation (Groq, in our case)
     """
     ticker = ticker.upper()
@@ -152,11 +153,67 @@ async def run_news_sentiment_agent(ticker: str, llm_call) -> NewsSentimentResult
     )
 
 
+async def run_document_sentiment_agent(
+    ticker: str, text: str, llm_call
+) -> NewsSentimentResult:
+    """
+    Score sentiment for a user-supplied document - a pasted news article,
+    analyst report, press release, or filing excerpt - against a ticker.
+
+    Unlike run_news_sentiment_agent, there's no prior-period baseline to
+    compare against, so "trend" isn't LLM-derived here; it stays at the
+    NewsSentimentResult default ("stable") rather than inventing a
+    trajectory from a single document.
+    """
+    ticker = ticker.upper()
+    errors: list[str] = []
+
+    stripped = text.strip()
+    trimmed = stripped[:MAX_DOCUMENT_CHARS]
+    if len(stripped) > MAX_DOCUMENT_CHARS:
+        errors.append(
+            f"Document truncated to the first {MAX_DOCUMENT_CHARS:,} characters."
+        )
+
+    response_text = await llm_call(
+        system=(
+            "You are a financial analyst. Given the full text of a news article, "
+            "analyst report, press release, or filing excerpt, assess its "
+            "sentiment toward the given ticker and identify key themes. "
+            "Respond ONLY in this exact format, nothing else:\n"
+            "SENTIMENT: bullish|bearish|neutral\n"
+            "SCORE: <number between -1.0 and 1.0>\n"
+            "CONFIDENCE: <number between 0.0 and 1.0>\n"
+            "THEMES: theme1, theme2, theme3\n"
+            "SUMMARY: <2-3 sentence narrative summary>"
+        ),
+        user=f"Ticker: {ticker}\n\n=== DOCUMENT TEXT ===\n{trimmed}",
+        max_tokens=400,
+    )
+
+    sentiment, score, _trend, confidence, themes, summary = _parse_llm_response(
+        response_text
+    )
+
+    return NewsSentimentResult(
+        ticker=ticker,
+        sentiment=sentiment,
+        sentiment_score=score,
+        trend="stable",
+        confidence=confidence,
+        summary=summary,
+        key_themes=themes,
+        recent_articles=[],
+        finnhub_sentiment_available=False,
+        errors=errors,
+    )
+
+
 def _parse_llm_response(text: str) -> tuple[str, float, str, float, list[str], str]:
     """
     Parse the structured LLM response into typed fields.
 
-    Falls back to safe defaults if any field is malformed —
+    Falls back to safe defaults if any field is malformed -
     LLMs occasionally deviate from the requested format.
     """
     sentiment = "neutral"

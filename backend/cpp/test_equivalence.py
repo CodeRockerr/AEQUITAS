@@ -1,10 +1,12 @@
 """Verify C++ kernels match AEQUITAS pandas implementations."""
 import sys
+from pathlib import Path
 import numpy as np
 import pandas as pd
 
-sys.path.insert(0, "/home/claude/AEQUITAS/backend/cpp")
-sys.path.insert(0, "/home/claude/AEQUITAS/backend")
+_HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(_HERE))
+sys.path.insert(0, str(_HERE.parent))
 import aequitas_kernels as ck
 from app.algorithms.ml.features import _rsi, _atr
 
@@ -31,6 +33,16 @@ results.append(check("ewm(span=12)", ck.ewm_mean(close, 2/13, 0), s.ewm(span=12,
 results.append(check("rsi(14) vs repo _rsi", ck.rsi(close, 14), _rsi(s, 14), rtol=1e-9, atol=1e-6))
 results.append(check("atr(14) vs repo _atr", ck.atr(high, low, close, 14),
                      _atr(pd.Series(high), pd.Series(low), s, 14), rtol=1e-9, atol=1e-9))
+
+# Leading-NaN case: return_1d-style series (np.log(close/close.shift(1)))
+# has a single NaN at index 0. This is what vol_10d/21d/63d roll over in
+# the full pipeline - pandas "forgets" a stale NaN once it exits the
+# window; a naive sliding sum does not. Regression coverage for that fix.
+ret = np.log(close[1:] / close[:-1])
+ret = np.concatenate([[np.nan], ret])
+rs = pd.Series(ret)
+results.append(check("rolling_mean(20) w/ leading NaN", ck.rolling_mean(ret, 20), rs.rolling(20).mean()))
+results.append(check("rolling_std(21) w/ leading NaN", ck.rolling_std(ret, 21), rs.rolling(21).std(), rtol=1e-7, atol=1e-9))
 
 print("\nALL PASS" if all(results) else "\nSOME FAILED")
 sys.exit(0 if all(results) else 1)

@@ -1,5 +1,5 @@
 """
-AEQUITAS — Pricing and risk API endpoints.
+AEQUITAS - Pricing and risk API endpoints.
 
 POST /api/v1/pricing/black-scholes     price an option
 POST /api/v1/pricing/implied-vol       compute implied volatility
@@ -170,14 +170,14 @@ async def compute_implied_vol(req: ImpliedVolRequest) -> dict:
     """
     Compute implied volatility from a market option price.
 
-    Uses Newton-Raphson iteration — typically converges in ~5 steps.
+    Uses Newton-Raphson iteration - typically converges in ~5 steps.
     """
     try:
         inputs = BlackScholesInputs(
             spot=req.spot,
             strike=req.strike,
             rate=req.rate,
-            volatility=0.20,  # initial guess — overridden by IV solver
+            volatility=0.20,  # initial guess - overridden by IV solver
             expiry=req.expiry,
             option_type=req.option_type,
         )

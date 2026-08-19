@@ -1,5 +1,5 @@
 """
-AEQUITAS — Finnhub API client.
+AEQUITAS - Finnhub API client.
 
 Finnhub provides free-tier access (60 calls/min, no credit card) to:
   - Company news
@@ -79,7 +79,7 @@ async def get_news_sentiment(ticker: str) -> dict | None:
     sentiment.bearishPercent, sentiment.bullishPercent, buzz metrics.
 
     Note: this endpoint is on Finnhub's premium tier as of certain
-    plan changes — if it 403s, we fall back to computing our own
+    plan changes - if it 403s, we fall back to computing our own
     sentiment from headlines via the LLM instead.
     """
     try:

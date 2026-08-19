@@ -1,8 +1,8 @@
 """
-AEQUITAS — Unit tests for the price history endpoint helpers.
+AEQUITAS - Unit tests for the price history endpoint helpers.
 
 We test the pure logic (range validation, date filtering) without
-hitting a real database or yfinance — those are integration-tested
+hitting a real database or yfinance - those are integration-tested
 manually since they require network/DB access.
 """
 

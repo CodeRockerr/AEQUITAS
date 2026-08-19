@@ -3,10 +3,12 @@
 import { useState } from "react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCard } from "@/components/ui/StatCard";
+import { CardGrid } from "@/components/ui/CardGrid";
 import { Badge } from "@/components/ui/Badge";
 import { Spinner } from "@/components/ui/Spinner";
 import { AgentProgress } from "@/components/ui/AgentProgress";
 import { InsightStrip } from "@/components/ui/InsightStrip";
+import { Markdown } from "@/components/ui/Markdown";
 import {
   extendedAgentsApi,
   type NewsSentimentResponse,
@@ -30,6 +32,11 @@ const NEWS_PROGRESS_STEPS = [
   "Scoring sentiment with LLM",
   "Comparing against prior period trend",
 ];
+const DOCUMENT_PROGRESS_STEPS = [
+  "Reading pasted document",
+  "Scoring sentiment with LLM",
+  "Extracting key themes",
+];
 const EARNINGS_PROGRESS_STEPS = [
   "Fetching earnings calendar from Finnhub",
   "Pulling key fundamentals",
@@ -52,6 +59,11 @@ export default function AgentsPage() {
   );
   const [newsLoading, setNewsLoading] = useState(false);
   const [newsError, setNewsError] = useState<string | null>(null);
+  const [newsSource, setNewsSource] = useState<"finnhub" | "paste">("finnhub");
+  const [newsPasteText, setNewsPasteText] = useState("");
+  const [fileUploadLoading, setFileUploadLoading] = useState(false);
+  const [fileUploadError, setFileUploadError] = useState<string | null>(null);
+  const [fileUploadName, setFileUploadName] = useState<string | null>(null);
 
   const [earningsTicker, setEarningsTicker] = useState("AAPL");
   const [earningsResult, setEarningsResult] =
@@ -65,11 +77,42 @@ export default function AgentsPage() {
   const [portfolioLoading, setPortfolioLoading] = useState(false);
   const [portfolioError, setPortfolioError] = useState<string | null>(null);
 
+  async function handleFileUpload(file: File) {
+    setFileUploadLoading(true);
+    setFileUploadError(null);
+    try {
+      const { text, truncated } = await extendedAgentsApi.extractTextFromFile(
+        file,
+      );
+      setNewsPasteText(text);
+      setFileUploadName(
+        truncated ? `${file.name} (truncated to 20,000 chars)` : file.name,
+      );
+    } catch (e) {
+      setFileUploadError(
+        e instanceof Error ? e.message : "Could not extract text from file",
+      );
+      setFileUploadName(null);
+    } finally {
+      setFileUploadLoading(false);
+    }
+  }
+
   async function runNewsSentiment() {
+    if (newsSource === "paste" && newsPasteText.trim().length < 50) {
+      setNewsError("Paste at least 50 characters of article/report text.");
+      return;
+    }
     setNewsLoading(true);
     setNewsError(null);
     try {
-      const r = await extendedAgentsApi.newsSentiment(newsTicker);
+      const r =
+        newsSource === "paste"
+          ? await extendedAgentsApi.newsSentimentFromText(
+              newsTicker,
+              newsPasteText,
+            )
+          : await extendedAgentsApi.newsSentiment(newsTicker);
       setNewsResult(r);
     } catch (e) {
       setNewsError(
@@ -226,6 +269,45 @@ export default function AgentsPage() {
               className="card"
               style={{ padding: "20px 24px", marginBottom: "24px" }}
             >
+              <div className="stat-label" style={{ marginBottom: "6px" }}>
+                Source
+              </div>
+              <div style={{ display: "flex", gap: "4px", marginBottom: "16px" }}>
+                {(
+                  [
+                    { id: "finnhub", label: "Finnhub headlines" },
+                    { id: "paste", label: "Paste article / report" },
+                  ] as const
+                ).map((opt) => (
+                  <button
+                    key={opt.id}
+                    onClick={() => {
+                      setNewsSource(opt.id);
+                      setNewsError(null);
+                    }}
+                    className="btn"
+                    style={{
+                      background:
+                        opt.id === newsSource
+                          ? "var(--text-primary)"
+                          : "transparent",
+                      color:
+                        opt.id === newsSource
+                          ? "var(--text-inverse)"
+                          : "var(--text-secondary)",
+                      borderColor:
+                        opt.id === newsSource
+                          ? "var(--text-primary)"
+                          : "var(--border-default)",
+                      padding: "5px 10px",
+                      fontSize: "11px",
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+
               <div className="grid grid-cols-1 gap-4 items-end md:grid-cols-[auto_1fr_auto]">
                 <div>
                   <div className="stat-label" style={{ marginBottom: "6px" }}>
@@ -263,7 +345,11 @@ export default function AgentsPage() {
                 <button
                   onClick={() => void runNewsSentiment()}
                   className="btn btn-primary"
-                  disabled={newsLoading}
+                  disabled={
+                    newsLoading ||
+                    (newsSource === "paste" &&
+                      newsPasteText.trim().length < 50)
+                  }
                 >
                   {newsLoading ? (
                     <>
@@ -274,6 +360,115 @@ export default function AgentsPage() {
                   )}
                 </button>
               </div>
+
+              {newsSource === "paste" && (
+                <div style={{ marginTop: "16px" }}>
+                  <div
+                    className="stat-label"
+                    style={{
+                      marginBottom: "6px",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                    }}
+                  >
+                    <span>Article / Report Text</span>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "10px",
+                      }}
+                    >
+                      <label
+                        className="btn"
+                        style={{
+                          fontSize: "10px",
+                          padding: "4px 10px",
+                          cursor: fileUploadLoading ? "wait" : "pointer",
+                          textTransform: "none",
+                          letterSpacing: 0,
+                        }}
+                      >
+                        {fileUploadLoading ? (
+                          <>
+                            <Spinner size={10} /> Reading...
+                          </>
+                        ) : (
+                          "Upload file (.txt/.md/.pdf) →"
+                        )}
+                        <input
+                          type="file"
+                          accept=".txt,.md,.pdf"
+                          disabled={fileUploadLoading}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) void handleFileUpload(file);
+                            e.target.value = "";
+                          }}
+                          style={{
+                            position: "absolute",
+                            width: 1,
+                            height: 1,
+                            overflow: "hidden",
+                            opacity: 0,
+                          }}
+                        />
+                      </label>
+                      <span style={{ textTransform: "none", letterSpacing: 0 }}>
+                        {newsPasteText.trim().length.toLocaleString()} chars
+                        {newsPasteText.trim().length < 50 ? " (min 50)" : ""}
+                      </span>
+                    </div>
+                  </div>
+                  {fileUploadName && !fileUploadError && (
+                    <div
+                      style={{
+                        fontFamily: "var(--font-mono)",
+                        fontSize: "10px",
+                        color: "var(--accent-green)",
+                        marginBottom: "6px",
+                      }}
+                    >
+                      ✓ Loaded from {fileUploadName}
+                    </div>
+                  )}
+                  {fileUploadError && (
+                    <div
+                      style={{
+                        fontFamily: "var(--font-mono)",
+                        fontSize: "10px",
+                        color: "var(--accent-red)",
+                        marginBottom: "6px",
+                      }}
+                    >
+                      {fileUploadError}
+                    </div>
+                  )}
+                  <textarea
+                    value={newsPasteText}
+                    onChange={(e) => {
+                      setNewsPasteText(e.target.value);
+                      setFileUploadName(null);
+                    }}
+                    placeholder="Paste the full text of a news article, analyst report, press release, or filing excerpt here..."
+                    rows={8}
+                    style={{
+                      width: "100%",
+                      fontFamily: "var(--font-mono)",
+                      fontSize: "12px",
+                      color: "var(--text-primary)",
+                      background: "var(--bg-elevated)",
+                      border: "1px solid var(--border-subtle)",
+                      borderRadius: "8px",
+                      padding: "10px 12px",
+                      resize: "vertical",
+                      outline: "none",
+                      lineHeight: "1.6",
+                    }}
+                  />
+                </div>
+              )}
             </div>
 
             {newsLoading && (
@@ -287,7 +482,14 @@ export default function AgentsPage() {
                 }}
               >
                 <Spinner size={24} />
-                <AgentProgress steps={NEWS_PROGRESS_STEPS} msPerStep={2500} />
+                <AgentProgress
+                  steps={
+                    newsSource === "paste"
+                      ? DOCUMENT_PROGRESS_STEPS
+                      : NEWS_PROGRESS_STEPS
+                  }
+                  msPerStep={2500}
+                />
               </div>
             )}
 
@@ -311,15 +513,7 @@ export default function AgentsPage() {
 
             {newsResult && !newsLoading && (
               <>
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns:
-                      "repeat(auto-fill, minmax(150px, 1fr))",
-                    gap: "12px",
-                    marginBottom: "20px",
-                  }}
-                >
+                <CardGrid minWidth="150px" gap="12px" style={{ marginBottom: "20px" }}>
                   <StatCard
                     label="Sentiment"
                     value={newsResult.sentiment.toUpperCase()}
@@ -348,7 +542,7 @@ export default function AgentsPage() {
                     value={`${(newsResult.confidence * 100).toFixed(0)}%`}
                     delay={180}
                   />
-                </div>
+                </CardGrid>
 
                 <InsightStrip {...buildNewsInsight(newsResult)} />
 
@@ -422,6 +616,19 @@ export default function AgentsPage() {
                     >
                       Recent Headlines
                     </div>
+                    {newsResult.recent_articles.length === 0 && (
+                      <div
+                        style={{
+                          fontFamily: "var(--font-mono)",
+                          fontSize: "11px",
+                          color: "var(--text-tertiary)",
+                          lineHeight: "1.6",
+                        }}
+                      >
+                        No Finnhub headlines - this result is scored from the
+                        pasted document only.
+                      </div>
+                    )}
                     {newsResult.recent_articles.slice(0, 6).map((a, i) => (
                       <a
                         key={i}
@@ -591,15 +798,7 @@ export default function AgentsPage() {
 
             {earningsResult && !earningsLoading && (
               <>
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns:
-                      "repeat(auto-fill, minmax(160px, 1fr))",
-                    gap: "12px",
-                    marginBottom: "20px",
-                  }}
-                >
+                <CardGrid minWidth="160px" gap="12px" style={{ marginBottom: "20px" }}>
                   <StatCard
                     label="Next Earnings"
                     value={earningsResult.next_earnings_date ?? "Not scheduled"}
@@ -630,7 +829,7 @@ export default function AgentsPage() {
                     accent={guidanceVariant(earningsResult.guidance_sentiment)}
                     delay={180}
                   />
-                </div>
+                </CardGrid>
 
                 {!earningsResult.history_available && (
                   <div
@@ -679,17 +878,7 @@ export default function AgentsPage() {
                     >
                       {earningsResult.ticker} · Earnings Analysis
                     </div>
-                    <div
-                      style={{
-                        fontFamily: "var(--font-sans)",
-                        fontSize: "14px",
-                        color: "var(--text-secondary)",
-                        lineHeight: "1.8",
-                        whiteSpace: "pre-wrap",
-                      }}
-                    >
-                      {earningsResult.analysis}
-                    </div>
+                    <Markdown>{earningsResult.analysis}</Markdown>
                   </div>
 
                   <div
@@ -925,15 +1114,7 @@ export default function AgentsPage() {
 
             {portfolioResult && !portfolioLoading && (
               <>
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns:
-                      "repeat(auto-fill, minmax(150px, 1fr))",
-                    gap: "12px",
-                    marginBottom: "20px",
-                  }}
-                >
+                <CardGrid minWidth="150px" gap="12px" style={{ marginBottom: "20px" }}>
                   <StatCard
                     label="Max-Sharpe Return"
                     value={`${(portfolioResult.max_sharpe_return * 100).toFixed(1)}%`}
@@ -961,7 +1142,7 @@ export default function AgentsPage() {
                     value={String(portfolioResult.cointegrated_pairs.length)}
                     delay={240}
                   />
-                </div>
+                </CardGrid>
 
                 <InsightStrip {...buildPortfolioInsight(portfolioResult)} />
 
@@ -1219,17 +1400,7 @@ export default function AgentsPage() {
                   >
                     Portfolio Thesis
                   </div>
-                  <div
-                    style={{
-                      fontFamily: "var(--font-sans)",
-                      fontSize: "14px",
-                      color: "var(--text-secondary)",
-                      lineHeight: "1.8",
-                      whiteSpace: "pre-wrap",
-                    }}
-                  >
-                    {portfolioResult.thesis}
-                  </div>
+                  <Markdown>{portfolioResult.thesis}</Markdown>
                 </div>
 
                 {portfolioResult.errors.length > 0 && (

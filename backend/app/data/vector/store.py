@@ -1,5 +1,5 @@
 """
-AEQUITAS — pgvector document store for RAG.
+AEQUITAS - pgvector document store for RAG.
 
 Uses PostgreSQL full-text search for retrieval.
 pgvector is already enabled via init-db.sql.
@@ -21,7 +21,7 @@ class DocumentChunk(Base):
     A chunk of a financial document stored for RAG retrieval.
 
     We use Mapped[] annotations (SQLAlchemy 2.0 style) instead of
-    Column() with plain type hints — this satisfies both SQLAlchemy
+    Column() with plain type hints - this satisfies both SQLAlchemy
     and Pylance simultaneously.
     """
 

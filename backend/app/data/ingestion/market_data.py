@@ -1,5 +1,5 @@
 """
-AEQUITAS — Market data ingestion via yFinance.
+AEQUITAS - Market data ingestion via yFinance.
 """
 
 from datetime import UTC, datetime
@@ -9,6 +9,7 @@ import pandas as pd
 import structlog
 import yfinance as yf
 from pydantic import BaseModel, field_validator
+from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -203,3 +204,54 @@ async def fetch_and_store_company_info(
 
     result = await db.get(CompanyInfo, ticker)
     return result  # type: ignore[return-value]
+
+
+async def ensure_min_bars(
+    db: AsyncSession,
+    ticker: str,
+    min_rows: int,
+    period: str = "5y",
+    interval: str = "1d",
+) -> None:
+    """
+    Auto-ingest `ticker` if it doesn't already have `min_rows` bars.
+
+    Every ticker-driven page used to hard-fail with "insufficient data"
+    unless someone had manually called POST /ingest for that exact ticker
+    beforehand - the Dashboard's search-any-ticker flow (history.py) was
+    the only place that auto-ingested on demand. This gives every other
+    caller (signals, backtests, factor model, ...) the same behaviour:
+    best-effort, so a real yFinance failure still surfaces as the
+    caller's own "not found" error with the true row count.
+    """
+    ticker = ticker.upper().strip()
+    result = await db.execute(
+        select(func.count(OHLCVBar.time)).where(
+            OHLCVBar.ticker == ticker, OHLCVBar.interval == interval
+        )
+    )
+    count = result.scalar_one()
+    if count >= min_rows:
+        return
+
+    try:
+        await fetch_and_store_ohlcv(db, ticker, period=period, interval=interval)
+    except Exception as e:
+        log.warning("auto_ingest_failed", ticker=ticker, error=str(e))
+
+
+async def ensure_company_info(db: AsyncSession, ticker: str) -> None:
+    """
+    Auto-ingest company metadata (name/sector/description) if it's
+    missing - same rationale as ensure_min_bars, for the research
+    agent's company-context lookup rather than price bars.
+    """
+    ticker = ticker.upper().strip()
+    existing = await db.get(CompanyInfo, ticker)
+    if existing is not None:
+        return
+
+    try:
+        await fetch_and_store_company_info(db, ticker)
+    except Exception as e:
+        log.warning("auto_company_info_ingest_failed", ticker=ticker, error=str(e))

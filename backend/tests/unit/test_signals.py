@@ -1,5 +1,5 @@
 """
-AEQUITAS — Unit tests for momentum signals and backtester.
+AEQUITAS - Unit tests for momentum signals and backtester.
 """
 
 import numpy as np

@@ -1,5 +1,5 @@
 """
-AEQUITAS — Unit tests for the real-time price streaming service.
+AEQUITAS - Unit tests for the real-time price streaming service.
 
 We test the subscriber-tracking logic directly, using a fake
 WebSocket object, rather than spinning up a real WebSocket server.

@@ -1,14 +1,14 @@
 """
-AEQUITAS — Feature engineering pipeline for ML models.
+AEQUITAS - Feature engineering pipeline for ML models.
 
 Transforms raw OHLCV data into ML-ready features.
-All features are computed from price and volume alone —
+All features are computed from price and volume alone -
 no lookahead bias (never use future data to compute past features).
 
 Lookahead bias is the most common mistake in financial ML.
-Example of BAD feature: "next day's return" — obviously cheating.
+Example of BAD feature: "next day's return" - obviously cheating.
 Example of SUBTLE BAD feature: normalising by the full-series mean
-— the mean includes future data points.
+- the mean includes future data points.
 
 We avoid this by computing all features using only past data
 (rolling windows, lags) with explicit shift() calls.
@@ -25,7 +25,7 @@ def compute_features(df: pd.DataFrame) -> pd.DataFrame:
     Input columns: open, high, low, close, volume
     Output: original columns + engineered features, NaN rows dropped
 
-    All features use only past data — no lookahead bias.
+    All features use only past data - no lookahead bias.
 
     Args:
         df: DataFrame with OHLCV columns, DatetimeIndex
@@ -74,7 +74,7 @@ def compute_features(df: pd.DataFrame) -> pd.DataFrame:
     feat["vol_ratio"] = feat["vol_10d"] / feat["vol_63d"]
 
     # Bollinger Band width: (upper - lower) / middle
-    # Measures how "tight" the bands are — low = consolidation
+    # Measures how "tight" the bands are - low = consolidation
     sma_20 = close.rolling(20).mean()
     std_20 = close.rolling(20).std()
     feat["bb_width"] = (2 * std_20) / sma_20
@@ -87,7 +87,7 @@ def compute_features(df: pd.DataFrame) -> pd.DataFrame:
     feat["log_volume"] = np.log(volume + 1)
 
     # ── Price levels ──────────────────────────────────────────
-    # Distance from 52-week high/low — mean reversion signals
+    # Distance from 52-week high/low - mean reversion signals
     lookback_window = min(252, max(len(feat) - 1, 1))
     high_52w = high.rolling(lookback_window, min_periods=1).max()
     low_52w = low.rolling(lookback_window, min_periods=1).min()

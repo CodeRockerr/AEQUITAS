@@ -1,5 +1,5 @@
 ### ═══════════════════════════════════════════════════════
-###  AEQUITAS — API Test Requests
+###  AEQUITAS - API Test Requests
 ###  How to use: click "Send Request" above any ### block
 ###  Make sure `make dev` is running first
 ### ═══════════════════════════════════════════════════════
@@ -17,7 +17,7 @@ GET {{baseUrl}}/health/ready
 
 ### ── Market Data ─────────────────────────────────────────
 
-### 1. Ingest AAPL data — run this first
+### 1. Ingest AAPL data - run this first
 POST {{baseUrl}}/api/v1/market-data/{{ticker}}/ingest?period=1y&interval=1d
 
 ### 2. Get stored OHLCV bars

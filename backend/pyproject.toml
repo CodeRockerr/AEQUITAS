@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "aequitas-backend"
-version = "0.5.0"
-description = "AEQUITAS — Agentic Quant Research Platform"
+version = "0.13.0"
+description = "AEQUITAS - Agentic Quant Research Platform"
 requires-python = ">=3.13"
 
 dependencies = [
@@ -39,6 +39,10 @@ dependencies = [
     "langgraph==0.2.70",
     "groq==0.11.0",
     "websockets==13.1",
+    # ── SEC EDGAR filing ingestion ─────────────────────────────
+    "beautifulsoup4==4.15.0",
+    # ── Document sentiment file uploads ───────────────────────
+    "pypdf==6.16.1",
 ]
 
 

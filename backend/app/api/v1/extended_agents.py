@@ -1,17 +1,23 @@
 """
-AEQUITAS — Extended agentic features API endpoints.
+AEQUITAS - Extended agentic features API endpoints.
 
 POST /api/v1/agents/news-sentiment/{ticker}      news sentiment agent
 POST /api/v1/agents/earnings/{ticker}             earnings analysis agent
 POST /api/v1/agents/portfolio                     portfolio construction agent
 """
 
-from fastapi import APIRouter, Depends, HTTPException
+import io
+
+from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from pydantic import BaseModel
+from pypdf import PdfReader
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents.earnings_agent import run_earnings_agent
-from app.agents.news_sentiment_agent import run_news_sentiment_agent
+from app.agents.news_sentiment_agent import (
+    run_document_sentiment_agent,
+    run_news_sentiment_agent,
+)
 from app.agents.nodes import _llm
 from app.agents.portfolio_agent import run_portfolio_agent
 from app.db import get_db
@@ -40,6 +46,16 @@ class NewsSentimentOut(BaseModel):
     recent_articles: list[NewsArticleOut]
     finnhub_sentiment_available: bool
     errors: list[str]
+
+
+class DocumentSentimentRequest(BaseModel):
+    ticker: str
+    text: str
+
+
+class ExtractedTextOut(BaseModel):
+    text: str
+    truncated: bool
 
 
 class EarningsHistoryOut(BaseModel):
@@ -98,6 +114,96 @@ class PortfolioConstructionOut(BaseModel):
 # ── Endpoints ─────────────────────────────────────────────────
 
 
+MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
+MAX_EXTRACTED_CHARS = 20_000
+
+
+@router.post("/news-sentiment/extract-text", response_model=ExtractedTextOut)
+async def extract_text_from_upload(file: UploadFile) -> ExtractedTextOut:
+    """
+    Extract plain text from an uploaded .txt/.md/.pdf file, for the
+    Agents page's paste-article/report flow - lets someone upload a
+    report from disk instead of copy-pasting its text by hand.
+
+    Registered before /news-sentiment/{ticker} for the same reason as
+    /analyze-text: a path-param route would otherwise shadow it.
+    """
+    filename = (file.filename or "").lower()
+    content = await file.read()
+
+    if len(content) > MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail="File too large - max 10MB.")
+
+    if filename.endswith(".pdf"):
+        try:
+            reader = PdfReader(io.BytesIO(content))
+            text = "\n".join(page.extract_text() or "" for page in reader.pages)
+        except Exception as e:
+            raise HTTPException(
+                status_code=422, detail=f"Could not read PDF: {e}"
+            ) from e
+    elif filename.endswith((".txt", ".md")):
+        try:
+            text = content.decode("utf-8")
+        except UnicodeDecodeError:
+            text = content.decode("latin-1", errors="replace")
+    else:
+        raise HTTPException(
+            status_code=422,
+            detail="Unsupported file type - upload a .txt, .md, or .pdf file.",
+        )
+
+    text = text.strip()
+    if not text:
+        raise HTTPException(
+            status_code=422, detail="No extractable text found in that file."
+        )
+
+    return ExtractedTextOut(
+        text=text[:MAX_EXTRACTED_CHARS],
+        truncated=len(text) > MAX_EXTRACTED_CHARS,
+    )
+
+
+@router.post("/news-sentiment/analyze-text", response_model=NewsSentimentOut)
+async def news_sentiment_from_text(req: DocumentSentimentRequest) -> NewsSentimentOut:
+    """
+    Score sentiment for a pasted news article, analyst report, press
+    release, or filing excerpt against a ticker - for sources Finnhub
+    doesn't cover, or a specific document a user wants graded.
+
+    Registered before /news-sentiment/{ticker} - a path-param route would
+    otherwise shadow this one, matching "analyze-text" as if it were a
+    ticker symbol.
+    """
+    text = req.text.strip()
+    if len(text) < 50:
+        raise HTTPException(
+            status_code=422,
+            detail="Paste at least 50 characters of article/report text.",
+        )
+
+    try:
+        result = await run_document_sentiment_agent(req.ticker, text, _llm)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Document sentiment agent failed: {e}"
+        ) from e
+
+    return NewsSentimentOut(
+        ticker=result.ticker,
+        sentiment=result.sentiment,
+        sentiment_score=result.sentiment_score,
+        trend=result.trend,
+        confidence=result.confidence,
+        summary=result.summary,
+        key_themes=result.key_themes,
+        recent_articles=[],
+        finnhub_sentiment_available=result.finnhub_sentiment_available,
+        errors=result.errors,
+    )
+
+
 @router.post("/news-sentiment/{ticker}", response_model=NewsSentimentOut)
 async def news_sentiment(ticker: str) -> NewsSentimentOut:
     """
@@ -137,7 +243,7 @@ async def earnings_analysis(ticker: str) -> EarningsAnalysisOut:
     sentiment classification.
 
     history_available=false means Finnhub's free-tier earnings
-    calendar had no data for this ticker — the analysis still runs,
+    calendar had no data for this ticker - the analysis still runs,
     grounded in news + fundamentals instead.
     """
     try:

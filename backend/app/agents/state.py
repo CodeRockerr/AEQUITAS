@@ -1,10 +1,10 @@
 """
-AEQUITAS — LangGraph agent state definition.
+AEQUITAS - LangGraph agent state definition.
 
 The state is the shared memory that flows between all nodes
 in the graph. Every node can read and update it.
 
-Using TypedDict ensures every field is explicitly typed —
+Using TypedDict ensures every field is explicitly typed -
 no surprise keys, no silent overwrites.
 """
 
@@ -15,7 +15,7 @@ class ResearchState(TypedDict, total=False):
     """
     Shared state for the AEQUITAS research agent graph.
 
-    total=False means all fields are optional — nodes only
+    total=False means all fields are optional - nodes only
     update the fields they're responsible for.
     """
 

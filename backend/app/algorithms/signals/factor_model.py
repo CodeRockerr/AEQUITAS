@@ -1,5 +1,5 @@
 """
-AEQUITAS — Fama-French 3-factor model.
+AEQUITAS - Fama-French 3-factor model.
 
 The Fama-French model decomposes a stock's returns into:
   - Market factor (β_mkt): sensitivity to overall market moves
@@ -7,13 +7,13 @@ The Fama-French model decomposes a stock's returns into:
   - HML (High Minus Low): exposure to value premium
 
 The intercept (alpha) is what's left over after accounting
-for these three risk factors — it represents genuine skill
+for these three risk factors - it represents genuine skill
 or mispricing, not just passive factor exposure.
 
 Why this matters in interviews:
   "Your strategy returned 15%" is meaningless without asking
   "how much of that was just market beta?" Fama-French tells
-  you the risk-adjusted alpha — the part that actually adds value.
+  you the risk-adjusted alpha - the part that actually adds value.
 
 Factor proxies:
   Market: SPY (S&P 500 ETF)

@@ -1,5 +1,5 @@
 # ═══════════════════════════════════════════════════════════════
-#  AEQUITAS Backend — Dockerfile
+#  AEQUITAS Backend - Dockerfile
 #  Single source of truth: pyproject.toml controls all versions.
 #  Never hardcode package versions here.
 # ═══════════════════════════════════════════════════════════════
@@ -8,9 +8,12 @@ FROM python:3.13-slim
 
 WORKDIR /app
 
-# System dependencies needed to compile C extensions
+# System dependencies needed to compile C extensions, including the
+# C++20 aequitas_kernels extension built below (backend/cpp).
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
+    cmake \
+    ninja-build \
     libpq-dev \
     curl \
     && rm -rf /var/lib/apt/lists/*
@@ -19,7 +22,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN pip install --upgrade pip
 
 # Copy ONLY the dependency spec first.
-# Docker caches this layer — if pyproject.toml hasn't changed,
+# Docker caches this layer - if pyproject.toml hasn't changed,
 # the entire pip install step is skipped on rebuild. Fast.
 COPY pyproject.toml .
 
@@ -27,12 +30,20 @@ COPY pyproject.toml .
 # before the full source is copied
 RUN mkdir -p app && touch app/__init__.py
 
-# Install everything from pyproject.toml — one source of truth
+# Install everything from pyproject.toml - one source of truth
 RUN pip install -e ".[dev]"
 
 # Now copy the full application source
 # (separate step so code changes don't re-trigger pip install)
 COPY . .
+
+# Build and install the C++20 kernel extension (backend/cpp). Not part of
+# pyproject.toml on purpose - it's a separate CMake/pybind11 build with its
+# own toolchain requirements (see cpp/README.md). The app degrades
+# gracefully (aequitas_kernels import fails, pandas-only fallback) if this
+# step is ever skipped, so it's safe even if a base image lacks a C++20
+# compiler.
+RUN pip install ./cpp
 
 # Security: never run as root
 RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app

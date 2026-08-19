@@ -438,6 +438,23 @@ export function LoadingScreen({ onDismiss }: LoadingScreenProps) {
           </div>
         </div>
 
+        {/* Why this takes a minute */}
+        <p
+          style={{
+            textAlign: "center",
+            fontFamily: "var(--font-sans)",
+            fontSize: "12px",
+            color: "var(--text-tertiary)",
+            lineHeight: 1.6,
+            margin: 0,
+          }}
+        >
+          I&apos;m a broke grad student, so this runs on free-tier hosting -
+          the API is waking up from its nap and that takes a minute or two.
+          Sorry! Play the game, read a fact, or go creep on my portfolio and
+          resume below while you wait.
+        </p>
+
         {/* Fun fact card */}
         <div
           style={{
@@ -515,7 +532,7 @@ export function LoadingScreen({ onDismiss }: LoadingScreenProps) {
           </div>
         )}
 
-        {/* Portfolio link + skip */}
+        {/* Portfolio + resume links, skip */}
         <div
           style={{
             display: "flex",
@@ -524,41 +541,86 @@ export function LoadingScreen({ onDismiss }: LoadingScreenProps) {
             gap: "12px",
           }}
         >
-          <a
-            href="https://adit-2d-portfolio.vercel.app/"
-            target="_blank"
-            rel="noopener noreferrer"
+          <div
             style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "8px",
-              fontFamily: "var(--font-mono)",
-              fontSize: "11px",
-              color: "var(--text-secondary)",
-              padding: "8px 16px",
-              border: "1px solid var(--border-subtle)",
-              borderRadius: "100px",
-              textDecoration: "none",
-              background: "var(--bg-elevated)",
-              transition: "border-color 0.15s, color 0.15s",
-            }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLElement).style.borderColor =
-                "var(--accent-green)";
-              (e.currentTarget as HTMLElement).style.color =
-                "var(--accent-green)";
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLElement).style.borderColor =
-                "var(--border-subtle)";
-              (e.currentTarget as HTMLElement).style.color =
-                "var(--text-secondary)";
+              display: "flex",
+              gap: "10px",
+              flexWrap: "wrap",
+              justifyContent: "center",
             }}
           >
-            <span>◉</span>
-            <span>Built by Adit Shah, view portfolio</span>
-            <span style={{ opacity: 0.5 }}>↗</span>
-          </a>
+            <a
+              href="https://adit-2d-portfolio.vercel.app/"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                fontFamily: "var(--font-mono)",
+                fontSize: "11px",
+                color: "var(--text-secondary)",
+                padding: "8px 16px",
+                border: "1px solid var(--border-subtle)",
+                borderRadius: "100px",
+                textDecoration: "none",
+                background: "var(--bg-elevated)",
+                transition: "border-color 0.15s, color 0.15s",
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLElement).style.borderColor =
+                  "var(--accent-green)";
+                (e.currentTarget as HTMLElement).style.color =
+                  "var(--accent-green)";
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLElement).style.borderColor =
+                  "var(--border-subtle)";
+                (e.currentTarget as HTMLElement).style.color =
+                  "var(--text-secondary)";
+              }}
+            >
+              <span>◉</span>
+              <span>Built by Adit Shah, view portfolio</span>
+              <span style={{ opacity: 0.5 }}>↗</span>
+            </a>
+
+            <a
+              href="https://drive.google.com/file/d/1JdZfo_4qNAXY7i3eR5bb7H5pSvyslel4/view?usp=sharing"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "8px",
+                fontFamily: "var(--font-mono)",
+                fontSize: "11px",
+                color: "var(--text-secondary)",
+                padding: "8px 16px",
+                border: "1px solid var(--border-subtle)",
+                borderRadius: "100px",
+                textDecoration: "none",
+                background: "var(--bg-elevated)",
+                transition: "border-color 0.15s, color 0.15s",
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLElement).style.borderColor =
+                  "var(--accent-green)";
+                (e.currentTarget as HTMLElement).style.color =
+                  "var(--accent-green)";
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLElement).style.borderColor =
+                  "var(--border-subtle)";
+                (e.currentTarget as HTMLElement).style.color =
+                  "var(--text-secondary)";
+              }}
+            >
+              <span>◈</span>
+              <span>Hiring? View resume</span>
+              <span style={{ opacity: 0.5 }}>↗</span>
+            </a>
+          </div>
 
           <button
             onClick={onDismiss}

@@ -18,6 +18,21 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+// File uploads use FormData, which the browser must set its own
+// multipart Content-Type + boundary for - apiFetch always forces
+// application/json, so uploads need their own fetch without that header.
+async function apiUpload<T>(path: string, formData: FormData): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: "POST",
+    body: formData,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(err.detail ?? `API error: ${res.status}`);
+  }
+  return res.json() as Promise<T>;
+}
+
 // ── Health ───────────────────────────────────────────────────
 export interface HealthResponse {
   status: string;
@@ -112,6 +127,8 @@ export interface BacktestResponse {
   start_date: string;
   end_date: string;
   n_bars: number;
+  equity_curve: number[];
+  benchmark_equity_curve: number[];
   summary: string;
 }
 
@@ -372,6 +389,22 @@ export const extendedAgentsApi = {
     apiFetch<NewsSentimentResponse>(`/api/v1/agents/news-sentiment/${ticker}`, {
       method: "POST",
     }),
+  newsSentimentFromText: (ticker: string, text: string) =>
+    apiFetch<NewsSentimentResponse>(
+      "/api/v1/agents/news-sentiment/analyze-text",
+      {
+        method: "POST",
+        body: JSON.stringify({ ticker, text }),
+      },
+    ),
+  extractTextFromFile: (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return apiUpload<{ text: string; truncated: boolean }>(
+      "/api/v1/agents/news-sentiment/extract-text",
+      formData,
+    );
+  },
   earnings: (ticker: string) =>
     apiFetch<EarningsAnalysisResponse>(`/api/v1/agents/earnings/${ticker}`, {
       method: "POST",
@@ -400,9 +433,17 @@ export interface KernelResult {
   kernel: string;
   description: string;
   pandas_ms: number;
+  pandas_cold_ms: number;
+  pandas_peak_kb: number;
   cpp_ms: number | null;
+  cpp_cold_ms: number | null;
+  cpp_peak_kb: number | null;
   speedup: number | null;
   max_abs_diff: number | null;
+  numpy_ms: number | null;
+  numpy_peak_kb: number | null;
+  numpy_speedup: number | null;
+  numpy_max_abs_diff: number | null;
 }
 
 export interface BenchmarkResponse {
@@ -413,7 +454,107 @@ export interface BenchmarkResponse {
   results: KernelResult[];
 }
 
+export interface PipelineBenchmarkResponse {
+  rows: number;
+  output_rows: number;
+  reps: number;
+  cpp_available: boolean;
+  pandas_ms: number;
+  cpp_ms: number | null;
+  speedup: number | null;
+  max_abs_diff: number | null;
+  note: string;
+}
+
+export interface ParallelBenchmarkResponse {
+  rows: number;
+  symbols: number;
+  reps: number;
+  cpp_available: boolean;
+  cpu_count: number;
+  pandas_sequential_ms: number;
+  cpp_sequential_ms: number | null;
+  cpp_parallel_ms: number | null;
+  sequential_speedup: number | null;
+  parallel_speedup: number | null;
+  note: string;
+}
+
+export interface ScalingPoint {
+  threads: number;
+  ms: number;
+  speedup_vs_1_thread: number | null;
+}
+
+export interface ScalingBenchmarkResponse {
+  rows: number;
+  symbols: number;
+  cpp_available: boolean;
+  cpu_count: number;
+  points: ScalingPoint[];
+  note: string;
+}
+
+export type EdgeCaseScenario = "clean" | "leading_nan" | "interior_nan" | "all_nan";
+export type EdgeCaseKernel = "rolling_std" | "rolling_max";
+
+export interface EdgeCaseResponse {
+  scenario: EdgeCaseScenario;
+  kernel: EdgeCaseKernel;
+  cpp_available: boolean;
+  input: (number | null)[];
+  pandas: (number | null)[];
+  cpp: (number | null)[] | null;
+  numpy: (number | null)[];
+  cpp_matches_pandas: boolean | null;
+  numpy_matches_pandas: boolean;
+  note: string;
+}
+
+export interface RealBacktestResponse {
+  ticker: string;
+  start_date: string;
+  end_date: string;
+  n_bars: number;
+  n_bars_after_warmup: number;
+  years: number;
+  cpp_available: boolean;
+  pandas_ms: number;
+  cpp_ms: number | null;
+  speedup: number | null;
+  max_abs_diff: number | null;
+  strategy: string;
+  total_return_pct: number;
+  annual_return_pct: number;
+  sharpe_ratio: number;
+  n_trades: number;
+  backtest_results_match: boolean | null;
+  note: string;
+}
+
+export interface RunCountResponse {
+  count: number | null;
+  note: string;
+}
+
 export const benchmarkApi = {
   kernels: (rows: number) =>
     apiFetch<BenchmarkResponse>(`/api/v1/benchmark/kernels?rows=${rows}`),
+  pipeline: (rows: number) =>
+    apiFetch<PipelineBenchmarkResponse>(`/api/v1/benchmark/pipeline?rows=${rows}`),
+  parallel: (rows: number, symbols: number) =>
+    apiFetch<ParallelBenchmarkResponse>(
+      `/api/v1/benchmark/parallel?rows=${rows}&symbols=${symbols}`,
+    ),
+  scaling: (rows: number) =>
+    apiFetch<ScalingBenchmarkResponse>(`/api/v1/benchmark/scaling?rows=${rows}`),
+  edgeCase: (scenario: EdgeCaseScenario, kernel: EdgeCaseKernel) =>
+    apiFetch<EdgeCaseResponse>(
+      `/api/v1/benchmark/edge-case?scenario=${scenario}&kernel=${kernel}`,
+    ),
+  realBacktest: (ticker: string, years: number) =>
+    apiFetch<RealBacktestResponse>(
+      `/api/v1/benchmark/real-backtest?ticker=${ticker}&years=${years}`,
+    ),
+  runCount: () => apiFetch<RunCountResponse>("/api/v1/benchmark/run-count"),
 };

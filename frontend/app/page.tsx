@@ -5,6 +5,7 @@ import Link from "next/link";
 import { healthApi } from "@/lib/api";
 import { usePriceStream } from "@/hooks/usePriceStream";
 import { SITE_STATS } from "@/lib/site-stats";
+import { CardGrid } from "@/components/ui/CardGrid";
 
 const TICKER_LIST = [
   "AAPL",
@@ -277,13 +278,7 @@ export default function HomePage() {
           Platform
         </div>
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
-            gap: "12px",
-          }}
-        >
+        <CardGrid minWidth="240px" gap="12px">
           {FEATURES.map(({ href, icon, title, desc }, i) => (
             <Link key={href} href={href} style={{ textDecoration: "none" }}>
               <div
@@ -345,14 +340,13 @@ export default function HomePage() {
               </div>
             </Link>
           ))}
-        </div>
+        </CardGrid>
 
         {/* Quick stats */}
-        <div
+        <CardGrid
+          minWidth="130px"
+          gap="1px"
           style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))",
-            gap: "1px",
             background: "var(--border-subtle)",
             border: "1px solid var(--border-subtle)",
             borderRadius: "var(--radius-lg)",
@@ -401,7 +395,7 @@ export default function HomePage() {
               </div>
             </div>
           ))}
-        </div>
+        </CardGrid>
       </div>
     </div>
   );

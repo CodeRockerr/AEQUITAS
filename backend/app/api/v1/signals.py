@@ -1,5 +1,5 @@
 """
-AEQUITAS — Signals and backtesting API endpoints.
+AEQUITAS - Signals and backtesting API endpoints.
 
 GET  /api/v1/signals/{ticker}              momentum signals
 POST /api/v1/signals/pairs                 pairs trading signal
@@ -19,6 +19,7 @@ from app.backtesting.engine import (
     run_macd_backtest,
     run_momentum_backtest,
 )
+from app.data.ingestion.market_data import ensure_min_bars
 from app.db import get_db
 from app.models.market_data import OHLCVBar
 
@@ -72,6 +73,8 @@ class BacktestResponse(BaseModel):
     start_date: str
     end_date: str
     n_bars: int
+    equity_curve: list[float]
+    benchmark_equity_curve: list[float]
     summary: str
 
 
@@ -95,7 +98,19 @@ async def _get_close_series(
     db: AsyncSession,
     ticker: str,
     min_rows: int = 60,
+    max_rows: int | None = None,
 ) -> pd.Series:
+    """
+    max_rows keeps only the most recent `max_rows` bars. Point-in-time
+    signal/cointegration callers want the full history (more data = better
+    statistics). Backtest callers don't - _simulate_strategy() compounds
+    daily returns via cumprod() over the whole series, and some tickers
+    here (AAPL) go back to 1980; compounding a double-digit-annualized
+    strategy over 45 years produces a total_return_pct in the quadrillions,
+    which is both meaningless and breaks the equity-curve chart's axis.
+    """
+    await ensure_min_bars(db, ticker, min_rows)
+
     result = await db.execute(
         select(OHLCVBar.time, OHLCVBar.close)
         .where(
@@ -112,6 +127,9 @@ async def _get_close_series(
             detail=f"Need {min_rows}+ bars for {ticker}. "
             f"Call POST /api/v1/market-data/{ticker}/ingest first.",
         )
+
+    if max_rows is not None:
+        rows = rows[-max_rows:]
 
     times = [r.time for r in rows]
     closes = [float(r.close) for r in rows]
@@ -228,7 +246,9 @@ async def run_backtest(
             detail=f"Strategy must be one of: {valid_strategies}",
         )
 
-    close = await _get_close_series(db, ticker, min_rows=100)
+    # Cap to the last 5 years - see _get_close_series' docstring on why an
+    # uncapped backtest (e.g. AAPL's full history back to 1980) blows up.
+    close = await _get_close_series(db, ticker, min_rows=100, max_rows=1260)
 
     try:
         if strategy == "rsi":

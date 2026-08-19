@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { SITE_STATS } from "@/lib/site-stats";
+import { CardGrid } from "@/components/ui/CardGrid";
 
 const TECH_STACK = [
   {
     layer: "Agent Orchestration",
-    items: ["LangGraph 0.2", "Groq LLM (llama-3.3-70b)", "pgvector RAG"],
+    items: ["LangGraph 0.2", "Groq LLM (gpt-oss-120b)", "pgvector RAG"],
   },
   {
     layer: "ML & Algorithms",
@@ -180,12 +181,10 @@ export default function AboutPage() {
       </div>
 
       {/* ── Metrics strip ─────────────────────────────────── */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
-          borderBottom: "1px solid var(--border-subtle)",
-        }}
+      <CardGrid
+        minWidth="140px"
+        gap="0"
+        style={{ borderBottom: "1px solid var(--border-subtle)" }}
       >
         {METRICS.map(({ value, label }, i) => (
           <div
@@ -224,7 +223,7 @@ export default function AboutPage() {
             </div>
           </div>
         ))}
-      </div>
+      </CardGrid>
 
       <div style={{ padding: "64px 40px", maxWidth: "1100px" }}>
         {/* ── What it does ──────────────────────────────────── */}
@@ -242,11 +241,10 @@ export default function AboutPage() {
             What it does
           </div>
 
-          <div
+          <CardGrid
+            minWidth="280px"
+            gap="1px"
             style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-              gap: "1px",
               background: "var(--border-subtle)",
               border: "1px solid var(--border-subtle)",
               borderRadius: "var(--radius-lg)",
@@ -273,6 +271,16 @@ export default function AboutPage() {
                 icon: "◬",
                 title: "Vectorised backtesting",
                 desc: "RSI, MACD, and Bollinger Band strategies backtested with full tearsheets: Sharpe, Sortino, Calmar, max drawdown, alpha vs buy-and-hold.",
+              },
+              {
+                icon: "◓",
+                title: "Document sentiment analysis",
+                desc: "Paste any news article, analyst report, or filing excerpt against a ticker and get LLM-scored sentiment, confidence, and key themes - not limited to what Finnhub has indexed.",
+              },
+              {
+                icon: "◈",
+                title: "Draggable AI analyst",
+                desc: "The floating chat widget can be dragged anywhere on screen - position is remembered across visits, and the panel always opens on whichever side keeps it fully visible.",
               },
             ].map(({ icon, title, desc }) => (
               <div
@@ -316,7 +324,7 @@ export default function AboutPage() {
                 </div>
               </div>
             ))}
-          </div>
+          </CardGrid>
         </div>
 
         {/* ── Pipeline ──────────────────────────────────────── */}
@@ -428,13 +436,7 @@ export default function AboutPage() {
             Tech stack
           </div>
 
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
-              gap: "12px",
-            }}
-          >
+          <CardGrid minWidth="220px" gap="12px">
             {TECH_STACK.map(({ layer, items }) => (
               <div
                 key={layer}
@@ -473,7 +475,7 @@ export default function AboutPage() {
                 </div>
               </div>
             ))}
-          </div>
+          </CardGrid>
         </div>
 
         {/* ── Architecture diagram ──────────────────────────── */}
@@ -590,14 +592,7 @@ export default function AboutPage() {
         </div>
 
         {/* ── Built by ──────────────────────────────────────── */}
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-            gap: "16px",
-            marginBottom: "72px",
-          }}
-        >
+        <CardGrid minWidth="280px" gap="16px" style={{ marginBottom: "72px" }}>
           <div className="card" style={{ padding: "28px 32px" }}>
             <div
               style={{
@@ -664,7 +659,7 @@ export default function AboutPage() {
                 Portfolio
               </a>
               <a
-                href="https://drive.google.com/file/d/16_bFetVUPBOT01t3aSIqqDIR703DT7Lc/view?usp=sharing"
+                href="https://drive.google.com/file/d/1JdZfo_4qNAXY7i3eR5bb7H5pSvyslel4/view?usp=sharing"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn btn-ghost"
@@ -742,7 +737,9 @@ export default function AboutPage() {
                 }}
               >
                 <span style={{ color: "var(--text-tertiary)" }}>Tests</span>
-                <span style={{ color: "var(--accent-green)" }}>87 passing</span>
+                <span style={{ color: "var(--accent-green)" }}>
+                  {SITE_STATS.unitTests} passing
+                </span>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between" }}>
                 <span style={{ color: "var(--text-tertiary)" }}>CI/CD</span>
@@ -752,7 +749,7 @@ export default function AboutPage() {
               </div>
             </div>
           </div>
-        </div>
+        </CardGrid>
 
         {/* ── CTA ───────────────────────────────────────────── */}
         <div

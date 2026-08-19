@@ -1,17 +1,17 @@
 """
-AEQUITAS — WebSocket endpoint for real-time price streaming.
+AEQUITAS - WebSocket endpoint for real-time price streaming.
 
 Protocol:
   Client connects to /ws/prices
   Client sends: {"action": "subscribe", "ticker": "AAPL"}
   Client sends: {"action": "unsubscribe", "ticker": "AAPL"}
   Server sends: {"type": "price_update", "ticker": "AAPL", "price": 211.5, "change_pct": 1.2, "is_live": true, "timestamp": ...}
-                 (is_live=false means market is closed — price is the last known daily close, not a live tick)
+                 (is_live=false means market is closed - price is the last known daily close, not a live tick)
   Server sends: {"type": "subscribed", "ticker": "AAPL"}
   Server sends: {"type": "error", "message": "..."}
 
 One WebSocket connection can subscribe to multiple tickers
-simultaneously — the frontend opens one connection and sends
+simultaneously - the frontend opens one connection and sends
 multiple subscribe messages.
 """
 
@@ -102,7 +102,7 @@ async def websocket_prices(websocket: WebSocket) -> None:
 @router.get("/api/v1/ws/status")
 async def websocket_status() -> dict:
     """
-    Debug endpoint — shows which tickers currently have active
+    Debug endpoint - shows which tickers currently have active
     real-time refresh loops running.
     """
     active = price_stream_manager.active_tickers()

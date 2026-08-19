@@ -1,5 +1,5 @@
 """
-AEQUITAS — LangGraph research agent graph.
+AEQUITAS - LangGraph research agent graph.
 
 Graph structure:
   START → research → quant → thesis → critic
@@ -35,7 +35,7 @@ def build_research_graph(db: Any) -> Any:
     Build and compile the LangGraph research agent.
 
     Returns Any to avoid Pylance issues with CompiledStateGraph
-    vs StateGraph — at runtime this is a CompiledStateGraph.
+    vs StateGraph - at runtime this is a CompiledStateGraph.
 
     Args:
         db: AsyncSession injected from FastAPI
@@ -95,7 +95,7 @@ async def run_research_agent(
         "errors": [],
     }
 
-    # ainvoke is available on CompiledStateGraph — Pylance doesn't
+    # ainvoke is available on CompiledStateGraph - Pylance doesn't
     # know this because the return type is typed as StateGraph
     final_state: ResearchState = await compiled.ainvoke(initial_state)  # type: ignore[union-attr]
     return final_state

@@ -1,15 +1,15 @@
 """
-AEQUITAS — Earnings analysis agent.
+AEQUITAS - Earnings analysis agent.
 
 Real earnings call transcripts require paid data providers ($50+/month
 for most APIs). Instead, this agent synthesizes an earnings analysis
 from: (1) Finnhub's earnings calendar (actual vs estimated EPS/revenue,
 beat/miss history), (2) recent earnings-related news coverage, and
-(3) basic company fundamentals — giving a genuinely useful "earnings
+(3) basic company fundamentals - giving a genuinely useful "earnings
 analysis" without needing a transcript API subscription.
 
 Note: Finnhub's free tier sometimes returns an empty earnings calendar
-for certain tickers/date ranges even without erroring — this is a
+for certain tickers/date ranges even without erroring - this is a
 known data-availability limitation, not a bug. We detect this case
 explicitly and surface a clear message rather than a silent null.
 
@@ -79,7 +79,7 @@ async def run_earnings_agent(ticker: str, llm_call) -> EarningsAnalysisResult:
     if not calendar:
         errors.append(
             f"Finnhub returned no earnings calendar data for {ticker} on the "
-            f"current API plan — historical EPS beat/miss data is unavailable. "
+            f"current API plan - historical EPS beat/miss data is unavailable. "
             f"Falling back to news + fundamentals only."
         )
 
@@ -105,7 +105,7 @@ async def run_earnings_agent(ticker: str, llm_call) -> EarningsAnalysisResult:
         # Calendar has data but none with actuals reported yet
         errors.append(
             f"{ticker} has upcoming earnings dates on file, but no past "
-            f"quarter with reported actuals — beat/miss history unavailable."
+            f"quarter with reported actuals - beat/miss history unavailable."
         )
 
     history = [

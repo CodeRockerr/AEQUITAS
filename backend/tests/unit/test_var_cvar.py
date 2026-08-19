@@ -1,5 +1,5 @@
 """
-AEQUITAS — Unit tests for VaR and CVaR risk engine.
+AEQUITAS - Unit tests for VaR and CVaR risk engine.
 """
 
 import numpy as np
@@ -26,7 +26,7 @@ def test_historical_var_positive() -> None:
 
 @pytest.mark.unit
 def test_historical_cvar_gte_var() -> None:
-    """CVaR must always be >= VaR — it's the expected loss beyond VaR."""
+    """CVaR must always be >= VaR - it's the expected loss beyond VaR."""
     result = historical_var(RETURNS, PORTFOLIO_VALUE)
     assert result.cvar >= result.var
 

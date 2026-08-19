@@ -1,5 +1,5 @@
 """
-AEQUITAS — Market data API endpoints.
+AEQUITAS - Market data API endpoints.
 
 GET  /api/v1/market-data/{ticker}          fetch + store latest data
 GET  /api/v1/market-data/{ticker}/bars     query stored OHLCV bars
@@ -75,7 +75,7 @@ async def ingest_market_data(
     Fetch market data from Yahoo Finance and store in TimescaleDB.
 
     This is the entry point for loading data. Call this once per
-    ticker before querying bars. It's idempotent — safe to call
+    ticker before querying bars. It's idempotent - safe to call
     multiple times (uses upsert).
     """
     try:

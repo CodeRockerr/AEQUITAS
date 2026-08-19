@@ -1,5 +1,5 @@
 """
-AEQUITAS — Unit tests for portfolio optimiser.
+AEQUITAS - Unit tests for portfolio optimiser.
 """
 
 import numpy as np
@@ -34,7 +34,7 @@ def test_max_sharpe_weights_sum_to_one() -> None:
 
 @pytest.mark.unit
 def test_max_sharpe_weights_non_negative() -> None:
-    """No short selling — all weights must be >= 0."""
+    """No short selling - all weights must be >= 0."""
     result = maximum_sharpe(RETURNS, TICKERS)
     assert all(w >= -1e-6 for w in result.weights)
 
