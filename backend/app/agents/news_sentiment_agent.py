@@ -21,6 +21,7 @@ from app.services.finnhub_client import get_company_news, get_news_sentiment
 log = structlog.get_logger()
 
 MAX_HEADLINES_FOR_LLM = 15
+MAX_DOCUMENT_CHARS = 12_000
 
 
 @dataclass
@@ -148,6 +149,62 @@ async def run_news_sentiment_agent(ticker: str, llm_call) -> NewsSentimentResult
         key_themes=themes,
         recent_articles=article_summaries,
         finnhub_sentiment_available=finnhub_available,
+        errors=errors,
+    )
+
+
+async def run_document_sentiment_agent(
+    ticker: str, text: str, llm_call
+) -> NewsSentimentResult:
+    """
+    Score sentiment for a user-supplied document - a pasted news article,
+    analyst report, press release, or filing excerpt - against a ticker.
+
+    Unlike run_news_sentiment_agent, there's no prior-period baseline to
+    compare against, so "trend" isn't LLM-derived here; it stays at the
+    NewsSentimentResult default ("stable") rather than inventing a
+    trajectory from a single document.
+    """
+    ticker = ticker.upper()
+    errors: list[str] = []
+
+    stripped = text.strip()
+    trimmed = stripped[:MAX_DOCUMENT_CHARS]
+    if len(stripped) > MAX_DOCUMENT_CHARS:
+        errors.append(
+            f"Document truncated to the first {MAX_DOCUMENT_CHARS:,} characters."
+        )
+
+    response_text = await llm_call(
+        system=(
+            "You are a financial analyst. Given the full text of a news article, "
+            "analyst report, press release, or filing excerpt, assess its "
+            "sentiment toward the given ticker and identify key themes. "
+            "Respond ONLY in this exact format, nothing else:\n"
+            "SENTIMENT: bullish|bearish|neutral\n"
+            "SCORE: <number between -1.0 and 1.0>\n"
+            "CONFIDENCE: <number between 0.0 and 1.0>\n"
+            "THEMES: theme1, theme2, theme3\n"
+            "SUMMARY: <2-3 sentence narrative summary>"
+        ),
+        user=f"Ticker: {ticker}\n\n=== DOCUMENT TEXT ===\n{trimmed}",
+        max_tokens=400,
+    )
+
+    sentiment, score, _trend, confidence, themes, summary = _parse_llm_response(
+        response_text
+    )
+
+    return NewsSentimentResult(
+        ticker=ticker,
+        sentiment=sentiment,
+        sentiment_score=score,
+        trend="stable",
+        confidence=confidence,
+        summary=summary,
+        key_themes=themes,
+        recent_articles=[],
+        finnhub_sentiment_available=False,
         errors=errors,
     )
 
