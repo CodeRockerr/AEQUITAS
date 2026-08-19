@@ -8,10 +8,10 @@
  *   - version: latest git tag
  */
 export const SITE_STATS = {
-  unitTests: "152",
+  unitTests: "167",
   algorithms: "13",
   agentNodes: "4",
   mlModels: "2",
-  apiRouters: "12",
-  version: "v0.12.0",
+  apiRouters: "13",
+  version: "v0.13.0",
 } as const;
