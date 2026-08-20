@@ -1,4 +1,4 @@
-"use client";
+dashboard signal-breakdown rows wrap instead of overflowing"use client";
 
 import { useEffect, useRef, useState } from "react";
 import { PageHeader } from "@/components/ui/PageHeader";

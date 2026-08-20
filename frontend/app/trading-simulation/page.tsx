@@ -190,45 +190,48 @@ export default function TradingSimulationPage() {
               />
             </CardGrid>
 
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
-              <thead>
-                <tr style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-                  {["Tick", "Price", "Decision", "pandas", "C++", "Speedup"].map((h) => (
-                    <th
-                      key={h}
-                      style={{
-                        textAlign: "left",
-                        padding: "8px 12px",
-                        color: "var(--text-secondary)",
-                        fontWeight: 500,
-                      }}
-                    >
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {liveTicks.map((t) => (
-                  <tr key={t.seq} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
-                    <td style={{ padding: "8px 12px", fontFamily: "var(--font-mono)" }}>
-                      #{t.seq}
-                    </td>
-                    <td style={{ padding: "8px 12px", fontFamily: "var(--font-mono)" }}>
-                      ${t.price.toFixed(2)}
-                    </td>
-                    <td style={{ padding: "8px 12px" }}>
-                      <Badge variant={decisionBadgeVariant(t.decision)}>{t.decision}</Badge>
-                    </td>
-                    <td style={{ padding: "8px 12px" }}>{formatUs(t.pandas_us)}</td>
-                    <td style={{ padding: "8px 12px" }}>{formatUs(t.cpp_us)}</td>
-                    <td style={{ padding: "8px 12px", fontWeight: 600 }}>
-                      {t.speedup != null ? `${t.speedup}x` : "N/A"}
-                    </td>
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                    {["Tick", "Price", "Decision", "pandas", "C++", "Speedup"].map((h) => (
+                      <th
+                        key={h}
+                        style={{
+                          textAlign: "left",
+                          padding: "8px 12px",
+                          color: "var(--text-secondary)",
+                          fontWeight: 500,
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {h}
+                      </th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {liveTicks.map((t) => (
+                    <tr key={t.seq} style={{ borderBottom: "1px solid var(--border-subtle)" }}>
+                      <td style={{ padding: "8px 12px", fontFamily: "var(--font-mono)" }}>
+                        #{t.seq}
+                      </td>
+                      <td style={{ padding: "8px 12px", fontFamily: "var(--font-mono)" }}>
+                        ${t.price.toFixed(2)}
+                      </td>
+                      <td style={{ padding: "8px 12px" }}>
+                        <Badge variant={decisionBadgeVariant(t.decision)}>{t.decision}</Badge>
+                      </td>
+                      <td style={{ padding: "8px 12px" }}>{formatUs(t.pandas_us)}</td>
+                      <td style={{ padding: "8px 12px" }}>{formatUs(t.cpp_us)}</td>
+                      <td style={{ padding: "8px 12px", fontWeight: 600 }}>
+                        {t.speedup != null ? `${t.speedup}x` : "N/A"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
             <p style={{ fontSize: 12, color: "var(--text-secondary)", maxWidth: 720 }}>
               Same RSI-14 kernel as the per-kernel benchmark, run once per incoming tick
