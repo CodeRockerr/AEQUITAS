@@ -22,7 +22,7 @@ const TICKER_SYMBOLS = [
   "AMD",
 ];
 const MINI_GAME_DURATION = 20; // seconds
-const FACT_ROTATE_MS = 8000; // now that the screen holds for 40-45s, cycle through several facts instead of showing one static fact the whole time
+const FACT_ROTATE_MS = 8000; // now that the screen holds for 30-35s, cycle through several facts instead of showing one static fact the whole time
 const GAME_RESTART_DELAY_MS = 4000; // pause on the score before auto-starting a new round
 
 function useTypewriter(text: string, speed = 28) {
@@ -85,7 +85,7 @@ function TickerCatchGame({ onScore }: { onScore: (n: number) => void }) {
     setJustBeatHighScore(false);
   }, []);
 
-  // The loading screen now holds for 40-45s but a round only lasts
+  // The loading screen now holds for 30-35s but a round only lasts
   // MINI_GAME_DURATION (20s) - auto-restart after a short pause on the
   // score instead of leaving a dead "game over" screen for the rest of
   // the wait. A visible "Play again" button lets anyone skip the pause.
@@ -341,7 +341,7 @@ export function LoadingScreen({ onDismiss }: LoadingScreenProps) {
   // mismatch from Math.random() running separately on server and client)
   // and is picked once on mount. The typewriter gets "" until then, so it
   // never flashes one fact and then resets into a different one. With the
-  // screen now holding for 40-45s, it then rotates to a new (never
+  // screen now holding for 30-35s, it then rotates to a new (never
   // immediately-repeated) fact every FACT_ROTATE_MS instead of sitting on
   // one static fact for the whole wait.
   const [factIndex, setFactIndex] = useState<number | null>(null);

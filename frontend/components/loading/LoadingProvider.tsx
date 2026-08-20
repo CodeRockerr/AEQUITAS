@@ -27,10 +27,10 @@ const MAX_WAIT_MS = 90000; // hard safety-net cap if the API is ever genuinely s
 // instantly, which used to mean this screen - built to show off the fun
 // fact / mini-game / portfolio+resume links while a slow cold start masked
 // the wait - flashed by too fast for anyone to actually see any of it.
-// Holding it up for a deliberate minimum (picked once per visit, 40-45s)
+// Holding it up for a deliberate minimum (picked once per visit, 30-35s)
 // keeps that content genuinely visible; Skip still bypasses this instantly
 // for anyone in a hurry.
-const MIN_DISPLAY_MS_RANGE: [number, number] = [40000, 45000];
+const MIN_DISPLAY_MS_RANGE: [number, number] = [30000, 35000];
 
 export function LoadingProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
