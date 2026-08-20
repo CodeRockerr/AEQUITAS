@@ -1,0 +1,36 @@
+name: Refresh Prices
+
+# Keeps the ticker universe's daily OHLCV bars current. Runs after US
+# markets close on weekdays and re-fetches just the last few trading
+# days - cheap, since fetch_and_store_ohlcv upserts (ON CONFLICT DO
+# UPDATE), so re-fetching an already-stored day is harmless.
+#
+# Can also be triggered manually from the Actions tab with period=max
+# to run a one-time full historical backfill for every ticker in
+# TICKER_UNIVERSE (backend/app/data/ingestion/universe.py), instead of
+# relying on each one's first user request to lazily auto-ingest it.
+
+on:
+  schedule:
+    # 22:00 UTC = 6pm ET / 5pm EDT - after the 4pm ET close, with
+    # buffer for Yahoo Finance's own end-of-day data to settle.
+    - cron: "0 22 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      period:
+        description: "yFinance period - '5d' for the routine top-up, 'max' for a full historical backfill"
+        default: "5d"
+        required: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Refresh ticker universe
+        run: |
+          curl -fsS --max-time 300 -X POST \
+            "https://aequitas-api.onrender.com/api/v1/market-data/refresh-universe?period=${PERIOD}" \
+            | tee refresh-result.json
+        env:
+          PERIOD: ${{ github.event.inputs.period || '5d' }}
