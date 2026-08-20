@@ -8,7 +8,7 @@
  * Built ahead of a CppCon 2026 talk on this work.
  */
 
-import { Fragment, useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCard } from "@/components/ui/StatCard";
 import { CardGrid } from "@/components/ui/CardGrid";
@@ -40,13 +40,12 @@ import {
 } from "recharts";
 
 const BAR_ANIM = { animationDuration: 900, animationEasing: "ease-out" as const };
-const IDLE_DEMO_INTERVAL_MS = 30_000;
 
 // Measured on Apple M-series (arm64, 8 cores), Apple clang -O3, 2026-08-15 -
 // see backend/cpp/README.md and make_benchmark_chart.py. Shown live as a
-// "dev machine (poster)" reference bar so a visitor can see this host vs.
-// the printed numbers in one glance instead of needing an explanation.
-const POSTER_REFERENCE_SPEEDUP: Record<string, { "10K": number; "100K": number; "1M": number }> = {
+// "dev machine (reference)" bar so a visitor can see this host vs. that
+// fixed baseline in one glance instead of needing an explanation.
+const REFERENCE_SPEEDUP: Record<string, { "10K": number; "100K": number; "1M": number }> = {
   rolling_std_21: { "10K": 4.5, "100K": 3.7, "1M": 4.1 },
   rolling_max_252: { "10K": 1.8, "100K": 1.8, "1M": 1.6 },
   ewm_span_12: { "10K": 1.9, "100K": 1.3, "1M": 1.3 },
@@ -265,7 +264,7 @@ export default function PerformancePage() {
     };
   }, [edgeKernel, edgeScenario]);
 
-  // -- "Run everything" + kiosk mode ---------------------------------
+  // -- "Run everything" ---------------------------------
   const anyLoading = loading || pipelineLoading || parallelLoading;
 
   const runEverything = async () => {
@@ -273,27 +272,6 @@ export default function PerformancePage() {
     await runPipeline();
     await runParallel();
   };
-
-  const runEverythingRef = useRef(runEverything);
-  runEverythingRef.current = runEverything;
-
-  const [kiosk, setKiosk] = useState(false);
-
-  useEffect(() => {
-    if (!kiosk) return;
-    const id = setInterval(() => runEverythingRef.current(), IDLE_DEMO_INTERVAL_MS);
-    return () => clearInterval(id);
-  }, [kiosk]);
-
-  // ?kiosk=1 on the URL turns on kiosk mode and fires the first run
-  // immediately - refresh the tab mid-conversation and it demos itself.
-  useEffect(() => {
-    if (new URLSearchParams(window.location.search).get("kiosk") === "1") {
-      setKiosk(true);
-      runEverythingRef.current();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const heroSpeedup = useCountUp(
     parallelData?.cpp_available ? (parallelData.parallel_speedup ?? null) : null,
@@ -314,7 +292,7 @@ export default function PerformancePage() {
       />
 
       <div style={{ padding: "24px clamp(16px, 5vw, 40px)", display: "grid", gap: 24 }}>
-        {/* -- Hero: headline number + run-everything + kiosk mode -- */}
+        {/* -- Hero: headline number + run-everything -- */}
         <div
           className="card animate-fade-up"
           style={{
@@ -385,24 +363,6 @@ export default function PerformancePage() {
               }}
             >
               {anyLoading ? "Running..." : "Run everything"}
-            </button>
-            <button
-              onClick={() => setKiosk((k) => !k)}
-              style={{
-                padding: "8px 16px",
-                borderRadius: 8,
-                border: kiosk
-                  ? "1px solid var(--accent-green)"
-                  : "1px solid var(--border-subtle)",
-                background: kiosk ? "var(--bg-elevated)" : "transparent",
-                color: kiosk ? "var(--accent-green)" : "var(--text-primary)",
-                cursor: "pointer",
-                fontSize: 13,
-                fontWeight: 600,
-              }}
-              title="Re-runs the full demo automatically every 30s - useful if you're stepping away mid-conversation"
-            >
-              {kiosk ? "● Kiosk mode: on" : "Kiosk mode: off"}
             </button>
           </div>
 
@@ -640,8 +600,8 @@ export default function PerformancePage() {
 
             {/* Speedup chart: falls back to plain pandas timings when the
                 C++ extension isn't built, instead of disappearing entirely.
-                When C++ is available, a second "dev machine (poster)" bar
-                shows the printed reference number right next to this host's
+                When C++ is available, a second "dev machine (reference)" bar
+                shows the fixed reference number right next to this host's
                 live one - no separate explanation needed. */}
             <div className="animate-fade-up" style={{ height: 320, animationDelay: "220ms" }}>
               <ResponsiveContainer width="100%" height="100%">
@@ -649,7 +609,7 @@ export default function PerformancePage() {
                   data={data.results.map((r) => ({
                     name: r.kernel,
                     value: data.cpp_available ? r.speedup : r.pandas_ms,
-                    reference: POSTER_REFERENCE_SPEEDUP[r.kernel]?.[referenceBucket(rows)],
+                    reference: REFERENCE_SPEEDUP[r.kernel]?.[referenceBucket(rows)],
                   }))}
                   margin={{ top: 24, right: 16, left: 0, bottom: 8 }}
                 >
@@ -666,7 +626,7 @@ export default function PerformancePage() {
                   <Tooltip
                     formatter={(v: number, name: string) =>
                       data.cpp_available
-                        ? [`${v}x`, name === "reference" ? "dev machine (poster)" : "this host"]
+                        ? [`${v}x`, name === "reference" ? "dev machine (reference)" : "this host"]
                         : [`${v}ms`, "pandas"]
                     }
                     contentStyle={{
@@ -740,7 +700,7 @@ export default function PerformancePage() {
                       display: "inline-block",
                     }}
                   />
-                  dev machine, printed on the poster
+                  dev machine, fixed reference
                 </span>
               </div>
             )}
