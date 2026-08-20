@@ -12,6 +12,9 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#F7F6F2" },
     { media: "(prefers-color-scheme: dark)", color: "#0C0C0A" },
@@ -31,9 +34,13 @@ export default function RootLayout({
         </a>
         <ThemeProvider>
           <LoadingProvider>
-            <div style={{ display: "flex", minHeight: "100vh" }}>
+            <div className="flex min-h-screen flex-col md:flex-row">
               <Sidebar />
-              <main id="main-content" style={{ flex: 1, overflow: "auto" }}>
+              <main
+                id="main-content"
+                className="min-w-0"
+                style={{ flex: 1, overflow: "auto" }}
+              >
                 {children}
               </main>
             </div>
