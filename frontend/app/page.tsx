@@ -137,7 +137,7 @@ export default function HomePage() {
       {/* Hero */}
       <div
         style={{
-          padding: "72px 40px 64px",
+          padding: "72px clamp(16px, 5vw, 40px) 64px",
           borderBottom: "1px solid var(--border-subtle)",
           position: "relative",
           overflow: "hidden",
@@ -264,7 +264,7 @@ export default function HomePage() {
       </div>
 
       {/* Feature cards */}
-      <div style={{ padding: "40px 40px 60px" }}>
+      <div style={{ padding: "40px clamp(16px, 5vw, 40px) 60px" }}>
         <div
           style={{
             fontFamily: "var(--font-mono)",
