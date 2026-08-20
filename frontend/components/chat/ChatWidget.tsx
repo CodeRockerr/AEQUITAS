@@ -147,6 +147,18 @@ export function ChatWidget() {
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
+  // Below this width the floating 380px panel wouldn't fit (or would fit
+  // with almost no margin) next to a draggable button - phones get a
+  // full-width bottom sheet instead of a repositionable floating panel.
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 640px)");
+    setIsMobile(mq.matches);
+    const onChange = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
   function startDrag(e: React.PointerEvent) {
     if (!posRef.current) return;
     (e.currentTarget as Element).setPointerCapture(e.pointerId);
@@ -340,7 +352,11 @@ export function ChatWidget() {
         </div>
       )}
 
-      {/* Floating button - draggable anywhere on screen */}
+      {/* Floating button - draggable anywhere on screen. Hidden while the
+          mobile bottom sheet covers most of the screen - it has its own
+          close button, and the corner button would otherwise float on
+          top of the sheet's content. */}
+      {!(isMobile && open) && (
       <button
         onClick={() => {
           if (movedRef.current) {
@@ -414,34 +430,57 @@ export function ChatWidget() {
           />
         )}
       </button>
+      )}
 
-      {/* Chat panel */}
+      {/* Chat panel - a full-width bottom sheet on phones (a 380px
+          draggable panel doesn't fit, and doesn't feel native, on a
+          360-430px screen); the floating anchored panel everywhere else. */}
       {open && (
         <div
-          style={{
-            position: "fixed",
-            top: `${panelPos.top}px`,
-            left: `${panelPos.left}px`,
-            width: `${PANEL_W}px`,
-            height: `${PANEL_H}px`,
-            background: "var(--bg-surface)",
-            border: "1px solid var(--border-subtle)",
-            borderRadius: "16px",
-            display: "flex",
-            flexDirection: "column",
-            zIndex: 9997,
-            boxShadow: "0 8px 48px rgba(0,0,0,0.4)",
-            overflow: "hidden",
-          }}
+          style={
+            isMobile
+              ? {
+                  position: "fixed",
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  top: "12dvh",
+                  background: "var(--bg-surface)",
+                  border: "1px solid var(--border-subtle)",
+                  borderRadius: "16px 16px 0 0",
+                  display: "flex",
+                  flexDirection: "column",
+                  zIndex: 9997,
+                  boxShadow: "0 -8px 48px rgba(0,0,0,0.4)",
+                  overflow: "hidden",
+                  paddingBottom: "env(safe-area-inset-bottom)",
+                }
+              : {
+                  position: "fixed",
+                  top: `${panelPos.top}px`,
+                  left: `${panelPos.left}px`,
+                  width: `${PANEL_W}px`,
+                  height: `${PANEL_H}px`,
+                  background: "var(--bg-surface)",
+                  border: "1px solid var(--border-subtle)",
+                  borderRadius: "16px",
+                  display: "flex",
+                  flexDirection: "column",
+                  zIndex: 9997,
+                  boxShadow: "0 8px 48px rgba(0,0,0,0.4)",
+                  overflow: "hidden",
+                }
+          }
         >
-          {/* Header - drag handle to reposition the whole widget */}
+          {/* Header - drag handle to reposition the whole widget (desktop
+              only; the mobile bottom sheet is anchored, not draggable) */}
           <div
-            onPointerDown={startDrag}
-            onPointerMove={onDragMove}
-            onPointerUp={endDrag}
-            onPointerCancel={endDrag}
+            onPointerDown={isMobile ? undefined : startDrag}
+            onPointerMove={isMobile ? undefined : onDragMove}
+            onPointerUp={isMobile ? undefined : endDrag}
+            onPointerCancel={isMobile ? undefined : endDrag}
             onDragStart={(e) => e.preventDefault()}
-            title="Drag to move"
+            title={isMobile ? undefined : "Drag to move"}
             style={{
               padding: "16px 20px",
               borderBottom: "1px solid var(--border-subtle)",
@@ -449,7 +488,7 @@ export function ChatWidget() {
               display: "flex",
               alignItems: "center",
               gap: "10px",
-              cursor: dragging ? "grabbing" : "grab",
+              cursor: isMobile ? "default" : dragging ? "grabbing" : "grab",
               touchAction: "none",
               userSelect: "none",
             }}
@@ -478,6 +517,29 @@ export function ChatWidget() {
                 Powered by Groq · Real data
               </div>
             </div>
+            {isMobile && (
+              <button
+                onClick={() => setOpen(false)}
+                aria-label="Close chat"
+                style={{
+                  marginLeft: "auto",
+                  width: "32px",
+                  height: "32px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  background: "none",
+                  border: "1px solid var(--border-subtle)",
+                  borderRadius: "var(--radius-md)",
+                  color: "var(--text-secondary)",
+                  cursor: "pointer",
+                  fontSize: "16px",
+                  flexShrink: 0,
+                }}
+              >
+                ✕
+              </button>
+            )}
           </div>
 
           {/* Messages */}
