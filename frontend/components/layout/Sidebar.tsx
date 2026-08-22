@@ -50,12 +50,14 @@ function NavLink({
   icon,
   active,
   onNavigate,
+  compact,
 }: {
   href: string;
   label: string;
   icon: string;
   active: boolean;
   onNavigate?: () => void;
+  compact?: boolean;
 }) {
   return (
     <Link
@@ -66,9 +68,9 @@ function NavLink({
         display: "flex",
         alignItems: "center",
         gap: "10px",
-        padding: "10px 12px",
+        padding: compact ? "6px 12px" : "10px 12px",
         borderRadius: "var(--radius-md)",
-        marginBottom: "2px",
+        marginBottom: compact ? "1px" : "2px",
         textDecoration: "none",
         transition: "all var(--duration-fast)",
       }}
@@ -100,23 +102,36 @@ function NavLink({
 function NavList({
   path,
   onNavigate,
+  compact,
 }: {
   path: string | null;
   onNavigate?: () => void;
+  /** Tighter row/group spacing so the full nav - plus the footer below
+   * it - fits within a typical viewport height without scrolling. Only
+   * used for the desktop sidebar; the mobile drawer keeps the roomier
+   * touch-friendly spacing regardless of how tall the phone is. */
+  compact?: boolean;
 }) {
   return (
-    <nav style={{ padding: "12px 8px", flex: 1, overflowY: "auto" }}>
+    <nav
+      style={{
+        padding: compact ? "8px 8px" : "12px 8px",
+        flex: 1,
+        overflowY: "auto",
+      }}
+    >
       {NAV_TOP.map((item) => (
         <NavLink
           key={item.href}
           {...item}
           active={path === item.href}
           onNavigate={onNavigate}
+          compact={compact}
         />
       ))}
 
       {NAV_GROUPS.map((group) => (
-        <div key={group.label} style={{ marginTop: "16px" }}>
+        <div key={group.label} style={{ marginTop: compact ? "10px" : "16px" }}>
           <div
             style={{
               fontFamily: "var(--font-mono)",
@@ -125,7 +140,7 @@ function NavList({
               color: "var(--text-tertiary)",
               textTransform: "uppercase",
               padding: "0 12px",
-              marginBottom: "6px",
+              marginBottom: compact ? "4px" : "6px",
             }}
           >
             {group.label}
@@ -136,6 +151,7 @@ function NavList({
               {...item}
               active={path === item.href}
               onNavigate={onNavigate}
+              compact={compact}
             />
           ))}
         </div>
@@ -143,8 +159,8 @@ function NavList({
 
       <div
         style={{
-          marginTop: "16px",
-          paddingTop: "12px",
+          marginTop: compact ? "10px" : "16px",
+          paddingTop: compact ? "8px" : "12px",
           borderTop: "1px solid var(--border-subtle)",
         }}
       >
@@ -154,6 +170,7 @@ function NavList({
             {...item}
             active={path === item.href}
             onNavigate={onNavigate}
+            compact={compact}
           />
         ))}
       </div>
@@ -469,7 +486,7 @@ export function Sidebar() {
           <Wordmark />
         </div>
 
-        <NavList path={path} />
+        <NavList path={path} compact />
         <SidebarFooter theme={theme} toggle={toggle} />
       </aside>
     </>
