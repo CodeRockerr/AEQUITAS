@@ -108,6 +108,7 @@ const PARALLEL_ROW_OPTIONS = [
 
 export default function PerformancePage() {
   const [rows, setRows] = useState(100_000);
+  const [kernelTicker, setKernelTicker] = useState<string | null>(null);
   const [data, setData] = useState<BenchmarkResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -117,7 +118,7 @@ export default function PerformancePage() {
     setLoading(true);
     setError(null);
     try {
-      setData(await benchmarkApi.kernels(rows));
+      setData(await benchmarkApi.kernels(rows, kernelTicker));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Benchmark failed");
     } finally {
@@ -162,6 +163,7 @@ export default function PerformancePage() {
 
   // -- End-to-end pipeline benchmark --------------------------------
   const [pipelineRows, setPipelineRows] = useState(50_000);
+  const [pipelineTicker, setPipelineTicker] = useState<string | null>(null);
   const [pipelineData, setPipelineData] = useState<PipelineBenchmarkResponse | null>(null);
   const [pipelineLoading, setPipelineLoading] = useState(false);
   const [pipelineError, setPipelineError] = useState<string | null>(null);
@@ -170,7 +172,7 @@ export default function PerformancePage() {
     setPipelineLoading(true);
     setPipelineError(null);
     try {
-      setPipelineData(await benchmarkApi.pipeline(pipelineRows));
+      setPipelineData(await benchmarkApi.pipeline(pipelineRows, pipelineTicker));
     } catch (e) {
       setPipelineError(e instanceof Error ? e.message : "Benchmark failed");
     } finally {
@@ -182,6 +184,7 @@ export default function PerformancePage() {
   // -- Multi-symbol parallel (GIL release) demo ---------------------
   const [parallelRows, setParallelRows] = useState(200_000);
   const [symbols, setSymbols] = useState(4);
+  const [parallelRealData, setParallelRealData] = useState(false);
   const [parallelData, setParallelData] = useState<ParallelBenchmarkResponse | null>(null);
   const [parallelLoading, setParallelLoading] = useState(false);
   const [parallelError, setParallelError] = useState<string | null>(null);
@@ -190,7 +193,7 @@ export default function PerformancePage() {
     setParallelLoading(true);
     setParallelError(null);
     try {
-      setParallelData(await benchmarkApi.parallel(parallelRows, symbols));
+      setParallelData(await benchmarkApi.parallel(parallelRows, symbols, parallelRealData));
     } catch (e) {
       setParallelError(e instanceof Error ? e.message : "Benchmark failed");
     } finally {
@@ -200,6 +203,7 @@ export default function PerformancePage() {
   };
 
   // -- Thread-count scaling sweep ------------------------------------
+  const [scalingRealData, setScalingRealData] = useState(false);
   const [scalingData, setScalingData] = useState<ScalingBenchmarkResponse | null>(null);
   const [scalingLoading, setScalingLoading] = useState(false);
   const [scalingError, setScalingError] = useState<string | null>(null);
@@ -208,7 +212,7 @@ export default function PerformancePage() {
     setScalingLoading(true);
     setScalingError(null);
     try {
-      setScalingData(await benchmarkApi.scaling(parallelRows));
+      setScalingData(await benchmarkApi.scaling(parallelRows, scalingRealData));
     } catch (e) {
       setScalingError(e instanceof Error ? e.message : "Benchmark failed");
     } finally {
@@ -403,15 +407,21 @@ export default function PerformancePage() {
           {ROW_OPTIONS.map((o) => (
             <button
               key={o.rows}
-              onClick={() => setRows(o.rows)}
+              onClick={() => {
+                setRows(o.rows);
+                setKernelTicker(null);
+              }}
               style={{
                 padding: "8px 16px",
                 borderRadius: 8,
                 border:
-                  rows === o.rows
+                  kernelTicker == null && rows === o.rows
                     ? "1px solid var(--accent-blue)"
                     : "1px solid var(--border-subtle)",
-                background: rows === o.rows ? "var(--bg-elevated)" : "transparent",
+                background:
+                  kernelTicker == null && rows === o.rows
+                    ? "var(--bg-elevated)"
+                    : "transparent",
                 color: "var(--text-primary)",
                 cursor: "pointer",
                 fontSize: 13,
@@ -419,6 +429,27 @@ export default function PerformancePage() {
               title={o.desc}
             >
               {o.label}
+            </button>
+          ))}
+          <span style={{ fontSize: 12, color: "var(--text-tertiary)" }}>or real data:</span>
+          {REAL_BACKTEST_TICKERS.map((t) => (
+            <button
+              key={t}
+              onClick={() => setKernelTicker(t)}
+              style={{
+                padding: "8px 16px",
+                borderRadius: 8,
+                border:
+                  kernelTicker === t
+                    ? "1px solid var(--accent-blue)"
+                    : "1px solid var(--border-subtle)",
+                background: kernelTicker === t ? "var(--bg-elevated)" : "transparent",
+                color: "var(--text-primary)",
+                cursor: "pointer",
+                fontSize: 13,
+              }}
+            >
+              {t}
             </button>
           ))}
           <button
@@ -536,8 +567,12 @@ export default function PerformancePage() {
             <CardGrid minWidth="180px" gap="16px">
               <StatCard
                 label="Dataset"
-                value={data.rows.toLocaleString()}
-                sub={`rows · median of ${data.reps} runs`}
+                value={data.ticker ?? data.rows.toLocaleString()}
+                sub={
+                  data.ticker
+                    ? `${data.start_date} to ${data.end_date} · median of ${data.reps} runs`
+                    : `rows · median of ${data.reps} runs`
+                }
                 delay={0}
               />
               <StatCard
@@ -1148,21 +1183,48 @@ export default function PerformancePage() {
           {PIPELINE_ROW_OPTIONS.map((o) => (
             <button
               key={o.rows}
-              onClick={() => setPipelineRows(o.rows)}
+              onClick={() => {
+                setPipelineRows(o.rows);
+                setPipelineTicker(null);
+              }}
               style={{
                 padding: "8px 16px",
                 borderRadius: 8,
                 border:
-                  pipelineRows === o.rows
+                  pipelineTicker == null && pipelineRows === o.rows
                     ? "1px solid var(--accent-blue)"
                     : "1px solid var(--border-subtle)",
-                background: pipelineRows === o.rows ? "var(--bg-elevated)" : "transparent",
+                background:
+                  pipelineTicker == null && pipelineRows === o.rows
+                    ? "var(--bg-elevated)"
+                    : "transparent",
                 color: "var(--text-primary)",
                 cursor: "pointer",
                 fontSize: 13,
               }}
             >
               {o.label}
+            </button>
+          ))}
+          <span style={{ fontSize: 12, color: "var(--text-tertiary)" }}>or real data:</span>
+          {REAL_BACKTEST_TICKERS.map((t) => (
+            <button
+              key={t}
+              onClick={() => setPipelineTicker(t)}
+              style={{
+                padding: "8px 16px",
+                borderRadius: 8,
+                border:
+                  pipelineTicker === t
+                    ? "1px solid var(--accent-blue)"
+                    : "1px solid var(--border-subtle)",
+                background: pipelineTicker === t ? "var(--bg-elevated)" : "transparent",
+                color: "var(--text-primary)",
+                cursor: "pointer",
+                fontSize: 13,
+              }}
+            >
+              {t}
             </button>
           ))}
           <button
@@ -1219,8 +1281,12 @@ export default function PerformancePage() {
             <CardGrid minWidth="180px" gap="16px">
               <StatCard
                 label="Dataset"
-                value={pipelineData.rows.toLocaleString()}
-                sub={`rows in · ${pipelineData.output_rows.toLocaleString()} out after warm-up`}
+                value={pipelineData.ticker ?? pipelineData.rows.toLocaleString()}
+                sub={
+                  pipelineData.ticker
+                    ? `${pipelineData.start_date} to ${pipelineData.end_date} · ${pipelineData.output_rows.toLocaleString()} rows after warm-up`
+                    : `rows in · ${pipelineData.output_rows.toLocaleString()} out after warm-up`
+                }
               />
               <StatCard
                 label="pandas"
@@ -1454,26 +1520,36 @@ export default function PerformancePage() {
           is what lets these threads actually run concurrently.
         </p>
         <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-          {PARALLEL_ROW_OPTIONS.map((o) => (
-            <button
-              key={o.rows}
-              onClick={() => setParallelRows(o.rows)}
-              style={{
-                padding: "8px 16px",
-                borderRadius: 8,
-                border:
-                  parallelRows === o.rows
-                    ? "1px solid var(--accent-blue)"
-                    : "1px solid var(--border-subtle)",
-                background: parallelRows === o.rows ? "var(--bg-elevated)" : "transparent",
-                color: "var(--text-primary)",
-                cursor: "pointer",
-                fontSize: 13,
-              }}
-            >
-              {o.label}
-            </button>
-          ))}
+          <div
+            style={{
+              display: "flex",
+              gap: 12,
+              opacity: parallelRealData ? 0.4 : 1,
+              pointerEvents: parallelRealData ? "none" : "auto",
+              transition: "opacity var(--duration-base) var(--ease-out)",
+            }}
+          >
+            {PARALLEL_ROW_OPTIONS.map((o) => (
+              <button
+                key={o.rows}
+                onClick={() => setParallelRows(o.rows)}
+                style={{
+                  padding: "8px 16px",
+                  borderRadius: 8,
+                  border:
+                    parallelRows === o.rows
+                      ? "1px solid var(--accent-blue)"
+                      : "1px solid var(--border-subtle)",
+                  background: parallelRows === o.rows ? "var(--bg-elevated)" : "transparent",
+                  color: "var(--text-primary)",
+                  cursor: "pointer",
+                  fontSize: 13,
+                }}
+              >
+                {o.label}
+              </button>
+            ))}
+          </div>
           {SYMBOL_OPTIONS.map((n) => (
             <button
               key={n}
@@ -1494,6 +1570,23 @@ export default function PerformancePage() {
               {n} symbols
             </button>
           ))}
+          <button
+            onClick={() => setParallelRealData((v) => !v)}
+            title={`Use real ingested history for up to ${REAL_BACKTEST_TICKERS.length} tickers (${REAL_BACKTEST_TICKERS.join(", ")}) instead of synthetic data`}
+            style={{
+              padding: "8px 16px",
+              borderRadius: 8,
+              border: parallelRealData
+                ? "1px solid var(--accent-blue)"
+                : "1px solid var(--border-subtle)",
+              background: parallelRealData ? "var(--bg-elevated)" : "transparent",
+              color: "var(--text-primary)",
+              cursor: "pointer",
+              fontSize: 13,
+            }}
+          >
+            {parallelRealData ? "✓ " : ""}Real data ({REAL_BACKTEST_TICKERS.join("/")})
+          </button>
           <button
             onClick={runParallel}
             disabled={parallelLoading}
@@ -1549,7 +1642,11 @@ export default function PerformancePage() {
               <StatCard
                 label="Workload"
                 value={`${parallelData.symbols} × ${parallelData.rows.toLocaleString()}`}
-                sub="symbols × rows, RSI-14"
+                sub={
+                  parallelData.tickers
+                    ? `${parallelData.tickers.join("/")}, RSI-14`
+                    : "symbols × rows, RSI-14"
+                }
               />
               <StatCard label="pandas sequential" value={`${parallelData.pandas_sequential_ms}ms`} />
               <StatCard
@@ -1638,6 +1735,23 @@ export default function PerformancePage() {
           subtitle="Fixed workload, varying thread-pool size - where does adding threads stop helping?"
         />
         <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+          <button
+            onClick={() => setScalingRealData((v) => !v)}
+            title={`Cycle real ingested history for ${REAL_BACKTEST_TICKERS.join(", ")} to fill all 8 thread-pool slots instead of synthetic data`}
+            style={{
+              padding: "8px 16px",
+              borderRadius: 8,
+              border: scalingRealData
+                ? "1px solid var(--accent-blue)"
+                : "1px solid var(--border-subtle)",
+              background: scalingRealData ? "var(--bg-elevated)" : "transparent",
+              color: "var(--text-primary)",
+              cursor: "pointer",
+              fontSize: 13,
+            }}
+          >
+            {scalingRealData ? "✓ " : ""}Real data ({REAL_BACKTEST_TICKERS.join("/")}, cycled)
+          </button>
           <button
             onClick={runScaling}
             disabled={scalingLoading}

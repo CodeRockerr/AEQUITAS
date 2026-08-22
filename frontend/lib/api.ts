@@ -448,6 +448,9 @@ export interface KernelResult {
 
 export interface BenchmarkResponse {
   rows: number;
+  ticker: string | null;
+  start_date: string | null;
+  end_date: string | null;
   reps: number;
   cpp_available: boolean;
   note: string;
@@ -456,6 +459,9 @@ export interface BenchmarkResponse {
 
 export interface PipelineBenchmarkResponse {
   rows: number;
+  ticker: string | null;
+  start_date: string | null;
+  end_date: string | null;
   output_rows: number;
   reps: number;
   cpp_available: boolean;
@@ -469,6 +475,7 @@ export interface PipelineBenchmarkResponse {
 export interface ParallelBenchmarkResponse {
   rows: number;
   symbols: number;
+  tickers: string[] | null;
   reps: number;
   cpp_available: boolean;
   cpu_count: number;
@@ -489,6 +496,7 @@ export interface ScalingPoint {
 export interface ScalingBenchmarkResponse {
   rows: number;
   symbols: number;
+  tickers: string[] | null;
   cpp_available: boolean;
   cpu_count: number;
   points: ScalingPoint[];
@@ -538,16 +546,30 @@ export interface RunCountResponse {
 }
 
 export const benchmarkApi = {
-  kernels: (rows: number) =>
-    apiFetch<BenchmarkResponse>(`/api/v1/benchmark/kernels?rows=${rows}`),
-  pipeline: (rows: number) =>
-    apiFetch<PipelineBenchmarkResponse>(`/api/v1/benchmark/pipeline?rows=${rows}`),
-  parallel: (rows: number, symbols: number) =>
-    apiFetch<ParallelBenchmarkResponse>(
-      `/api/v1/benchmark/parallel?rows=${rows}&symbols=${symbols}`,
+  kernels: (rows: number, ticker?: string | null) =>
+    apiFetch<BenchmarkResponse>(
+      ticker
+        ? `/api/v1/benchmark/kernels?ticker=${ticker}`
+        : `/api/v1/benchmark/kernels?rows=${rows}`,
     ),
-  scaling: (rows: number) =>
-    apiFetch<ScalingBenchmarkResponse>(`/api/v1/benchmark/scaling?rows=${rows}`),
+  pipeline: (rows: number, ticker?: string | null) =>
+    apiFetch<PipelineBenchmarkResponse>(
+      ticker
+        ? `/api/v1/benchmark/pipeline?ticker=${ticker}`
+        : `/api/v1/benchmark/pipeline?rows=${rows}`,
+    ),
+  parallel: (rows: number, symbols: number, realData?: boolean) =>
+    apiFetch<ParallelBenchmarkResponse>(
+      realData
+        ? `/api/v1/benchmark/parallel?symbols=${symbols}&real_data=true`
+        : `/api/v1/benchmark/parallel?rows=${rows}&symbols=${symbols}`,
+    ),
+  scaling: (rows: number, realData?: boolean) =>
+    apiFetch<ScalingBenchmarkResponse>(
+      realData
+        ? `/api/v1/benchmark/scaling?real_data=true`
+        : `/api/v1/benchmark/scaling?rows=${rows}`,
+    ),
   edgeCase: (scenario: EdgeCaseScenario, kernel: EdgeCaseKernel) =>
     apiFetch<EdgeCaseResponse>(
       `/api/v1/benchmark/edge-case?scenario=${scenario}&kernel=${kernel}`,

@@ -18,13 +18,15 @@ import { SectionHeader } from "@/components/ui/SectionHeader";
 import { QRFooter } from "@/components/ui/QRFooter";
 import { SimulationDiagram } from "@/components/ui/SimulationDiagram";
 
-const LIVE_DECISION_WS_URL =
+const LIVE_DECISION_WS_BASE =
   (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000").replace(/^http/, "ws") +
   "/ws/live-decision";
 const MAX_LIVE_TICKS_SHOWN = 10;
+const REAL_TICKERS = ["AAPL", "NVDA", "TSLA"];
 
 interface LiveTick {
   seq: number;
+  ticker: string | null;
   price: number;
   decision: "BUY" | "SELL" | "HOLD" | "WARMING_UP";
   signal: number;
@@ -50,6 +52,8 @@ export default function TradingSimulationPage() {
   const [liveConnected, setLiveConnected] = useState(false);
   const [liveTicks, setLiveTicks] = useState<LiveTick[]>([]);
   const [liveTotals, setLiveTotals] = useState({ count: 0, pandasUs: 0, cppUs: 0 });
+  const [selectedTicker, setSelectedTicker] = useState<string | null>(null);
+  const [liveError, setLiveError] = useState<string | null>(null);
   const liveWsRef = useRef<WebSocket | null>(null);
 
   const stopLiveDemo = () => {
@@ -60,7 +64,13 @@ export default function TradingSimulationPage() {
 
   const startLiveDemo = () => {
     if (liveWsRef.current) return;
-    const ws = new WebSocket(LIVE_DECISION_WS_URL);
+    setLiveError(null);
+    setLiveTicks([]);
+    setLiveTotals({ count: 0, pandasUs: 0, cppUs: 0 });
+    const url = selectedTicker
+      ? `${LIVE_DECISION_WS_BASE}?ticker=${selectedTicker}`
+      : LIVE_DECISION_WS_BASE;
+    const ws = new WebSocket(url);
     liveWsRef.current = ws;
 
     ws.onopen = () => setLiveConnected(true);
@@ -71,7 +81,13 @@ export default function TradingSimulationPage() {
     ws.onerror = () => ws.close();
     ws.onmessage = (event) => {
       try {
-        const tick: LiveTick = JSON.parse(event.data);
+        const parsed = JSON.parse(event.data);
+        if (parsed.type === "error") {
+          setLiveError(parsed.detail ?? "Live feed error");
+          ws.close();
+          return;
+        }
+        const tick: LiveTick = parsed;
         setLiveTicks((prev) => [tick, ...prev].slice(0, MAX_LIVE_TICKS_SHOWN));
         if (tick.pandas_us != null && tick.cpp_us != null) {
           setLiveTotals((prev) => ({
@@ -109,11 +125,14 @@ export default function TradingSimulationPage() {
 
       <div style={{ padding: "24px clamp(16px, 5vw, 40px)", display: "grid", gap: 24 }}>
         <p style={{ fontSize: 13, color: "var(--text-secondary)", maxWidth: 720, margin: "0 auto" }}>
-          This streams a synthetic random-walk price feed - no real broker, no real
-          orders, no real money. Every new bar re-runs the platform&apos;s actual RSI
-          signal logic (<code style={{ fontFamily: "var(--font-mono)" }}>
+          This streams a price feed - synthetic random-walk by default, or this
+          platform&apos;s own ingested real daily history for a ticker, replayed
+          tick-by-tick - no real broker, no real orders, no real money either way.
+          Every new bar re-runs the platform&apos;s actual RSI signal logic (
+          <code style={{ fontFamily: "var(--font-mono)" }}>
             app/algorithms/signals/momentum.py
-          </code>) once in pandas and once through the same C++20 kernel from the{" "}
+          </code>
+          ) once in pandas and once through the same C++20 kernel from the{" "}
           <code style={{ fontFamily: "var(--font-mono)" }}>Benchmarks</code> page, and
           times both. The point isn&apos;t the trading strategy - it&apos;s what faster
           kernels buy you in a system that has to decide on every tick.
@@ -130,6 +149,53 @@ export default function TradingSimulationPage() {
           subtitle="Start the feed and watch each tick's decision, and its latency, land in real time"
         />
         <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+          <div
+            style={{
+              display: "flex",
+              gap: 12,
+              opacity: liveConnected ? 0.4 : 1,
+              pointerEvents: liveConnected ? "none" : "auto",
+              transition: "opacity var(--duration-base) var(--ease-out)",
+            }}
+          >
+            <button
+              onClick={() => setSelectedTicker(null)}
+              style={{
+                padding: "8px 16px",
+                borderRadius: 8,
+                border:
+                  selectedTicker == null
+                    ? "1px solid var(--accent-blue)"
+                    : "1px solid var(--border-subtle)",
+                background: selectedTicker == null ? "var(--bg-elevated)" : "transparent",
+                color: "var(--text-primary)",
+                cursor: "pointer",
+                fontSize: 13,
+              }}
+            >
+              Synthetic
+            </button>
+            {REAL_TICKERS.map((t) => (
+              <button
+                key={t}
+                onClick={() => setSelectedTicker(t)}
+                style={{
+                  padding: "8px 16px",
+                  borderRadius: 8,
+                  border:
+                    selectedTicker === t
+                      ? "1px solid var(--accent-blue)"
+                      : "1px solid var(--border-subtle)",
+                  background: selectedTicker === t ? "var(--bg-elevated)" : "transparent",
+                  color: "var(--text-primary)",
+                  cursor: "pointer",
+                  fontSize: 13,
+                }}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
           <button
             onClick={liveConnected ? stopLiveDemo : startLiveDemo}
             style={{
@@ -160,9 +226,17 @@ export default function TradingSimulationPage() {
             </span>
           )}
           <span style={{ fontSize: 12, color: "var(--text-tertiary)" }}>
-            Synthetic price feed - no real broker, no real orders
+            {selectedTicker
+              ? `Real ${selectedTicker} history, replayed - no real broker, no real orders`
+              : "Synthetic price feed - no real broker, no real orders"}
           </span>
         </div>
+
+        {liveError && (
+          <div style={{ color: "var(--accent-red)", fontSize: 13, textAlign: "center" }}>
+            {liveError}
+          </div>
+        )}
 
         {liveTicks.length > 0 && (
           <div style={{ display: "grid", gap: 24 }}>
