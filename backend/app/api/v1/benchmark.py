@@ -42,6 +42,38 @@ from app.db import get_db
 from app.models.market_data import OHLCVBar
 from app.redis_client import get_run_count, increment_run_count
 
+
+def _effective_cpu_count() -> int:
+    """os.cpu_count() reports the host machine's total cores, not a
+    container's actual CPU quota - on a quota-limited deployment (e.g. a
+    free-tier Render instance sharing an 8-core host but entitled to only
+    a fraction of one), that mismatch makes a ThreadPoolExecutor sized
+    off os.cpu_count() oversubscribe far past what's actually schedulable,
+    turning "parallel" into contention overhead that's slower than
+    sequential. Reads the cgroup CPU quota (v2, falling back to v1) where
+    available, and falls back to os.cpu_count() everywhere else (e.g.
+    local dev, non-Linux hosts, or an unlimited quota)."""
+    try:
+        with open("/sys/fs/cgroup/cpu.max") as f:
+            quota_str, period_str = f.read().split()
+        if quota_str != "max":
+            return max(1, int(quota_str) // int(period_str))
+    except (OSError, ValueError):
+        pass
+
+    try:
+        with open("/sys/fs/cgroup/cpu/cpu.cfs_quota_us") as f:
+            quota = int(f.read().strip())
+        if quota > 0:
+            with open("/sys/fs/cgroup/cpu/cpu.cfs_period_us") as f:
+                period = int(f.read().strip())
+            return max(1, quota // period)
+    except (OSError, ValueError):
+        pass
+
+    return os.cpu_count() or 1
+
+
 try:
     import aequitas_kernels as ck
 except ImportError:  # extension not built in this environment
@@ -362,7 +394,7 @@ def benchmark_parallel(
         return float(np.median(ts))
 
     p_ms = bench(lambda: [_rsi(s, 14) for s in series])
-    cpu_count = os.cpu_count() or 1
+    cpu_count = _effective_cpu_count()
 
     if not CPP_AVAILABLE:
         return ParallelBenchmarkResponse(
@@ -380,7 +412,9 @@ def benchmark_parallel(
         )
 
     c_seq_ms = bench(lambda: [ck.rsi(c, 14) for c in closes])
-    with ThreadPoolExecutor(max_workers=symbols) as ex:
+    # Oversubscribing threads past the host's real quota turns "parallel"
+    # into pure contention overhead - cap at what's actually schedulable.
+    with ThreadPoolExecutor(max_workers=min(symbols, cpu_count)) as ex:
         c_par_ms = bench(lambda: list(ex.map(lambda c: ck.rsi(c, 14), closes)))
 
     return ParallelBenchmarkResponse(
@@ -435,7 +469,7 @@ def benchmark_scaling(
     adding threads stops helping once you run out of cores, and that's the
     interesting part, not a bug."""
     increment_run_count()
-    cpu_count = os.cpu_count() or 1
+    cpu_count = _effective_cpu_count()
 
     if not CPP_AVAILABLE:
         return ScalingBenchmarkResponse(
