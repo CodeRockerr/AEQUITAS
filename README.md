@@ -177,7 +177,7 @@ Two live pages built for the CppCon 2026 talk - every number on them is measured
 
 Every page has a floating **◈** button that opens an AI chat panel. Powered by **Groq's free tier** with tool use - the model calls your real AEQUITAS endpoints to answer questions with actual data, never hallucinated numbers.
 
-**Draggable anywhere on screen** - both the closed button and the open panel can be dragged to any position via pointer events; the panel auto-flips above/below and left/right so it always stays fully visible relative to wherever the button currently is. Position persists across reloads via `localStorage`.
+**Fixed to the bottom-right corner** on every page, with a proactive greeting bubble on load ("I'm an AI-powered assistant...") that stays up for 15s so first-time visitors immediately understand what the floating button is, even if they never open it. On phones the panel becomes a full-width bottom sheet instead of a corner-anchored panel.
 
 **10 tools available to the model:**
 
