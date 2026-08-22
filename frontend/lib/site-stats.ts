@@ -8,7 +8,7 @@
  *   - version: latest git tag
  */
 export const SITE_STATS = {
-  unitTests: "167",
+  unitTests: "222",
   algorithms: "13",
   agentNodes: "4",
   mlModels: "2",

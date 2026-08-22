@@ -7,7 +7,7 @@ A full-stack quantitative research platform combining real financial algorithms,
 [![CI](https://github.com/CodeRockerr/AEQUITAS/actions/workflows/ci.yml/badge.svg)](https://github.com/CodeRockerr/AEQUITAS/actions)
 ![Python](https://img.shields.io/badge/Python-3.13-blue)
 ![Node](https://img.shields.io/badge/Node-20-green)
-![Tests](https://img.shields.io/badge/tests-216%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-222%20passing-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-lightgrey)
 
 ---
@@ -120,7 +120,7 @@ flowchart TB
 | **Document Processing** | BeautifulSoup4 (SEC filing HTML → text), pypdf (uploaded PDF reports → text) |
 | **Migrations** | Alembic (infrastructure-agnostic) |
 | **CI/CD** | GitHub Actions - backend (lint/type-check/test), C++ kernels (build + equivalence + benchmark, x86-64), frontend (type-check/lint/build), keep-warm |
-| **Testing** | Pytest + pytest-asyncio (167 tests) |
+| **Testing** | Pytest + pytest-asyncio (222 tests) |
 
 ---
 
@@ -267,7 +267,7 @@ AEQUITAS/
 │   │   ├── make_benchmark_chart.py  # static chart from hardcoded numbers
 │   │   └── make_live_benchmark_chart.py  # same chart, pulled from a running host
 │   ├── alembic/versions/            # infrastructure-agnostic migrations
-│   ├── tests/unit/                  # 216 pytest tests
+│   ├── tests/unit/                  # 222 pytest tests
 │   └── pyproject.toml
 ├── frontend/
 │   ├── app/                         # 10 pages: Overview, Dashboard, Backtests, Theses, Risk, Factors,
@@ -399,7 +399,7 @@ mypy app
 pytest tests/unit/ -v
 ```
 
-**216 tests passing.** Coverage threshold: 65%.
+**222 tests passing.** Coverage threshold: 65%.
 
 To also test the C++ kernels locally:
 ```bash
