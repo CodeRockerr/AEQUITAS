@@ -92,6 +92,9 @@ MAX_PARALLEL_ROWS = 1_000_000
 MAX_PARALLEL_SYMBOLS = 8
 PARALLEL_REPS = 3
 
+REAL_BACKTEST_REPS = 3
+REAL_BACKTEST_TICKERS = ["AAPL", "NVDA", "TSLA"]
+
 
 def _synthetic_ohlcv_df(rows: int, seed: int = 42) -> pd.DataFrame:
     """Synthetic OHLCV DataFrame for the pipeline benchmark - a
@@ -148,6 +151,9 @@ class KernelResult(BaseModel):
 
 class BenchmarkResponse(BaseModel):
     rows: int
+    ticker: str | None = None
+    start_date: str | None = None
+    end_date: str | None = None
     reps: int
     cpp_available: bool
     note: str
@@ -186,15 +192,36 @@ def _peak_kb(fn) -> float:
 
 
 @router.get("/kernels", response_model=BenchmarkResponse)
-def benchmark_kernels(
+async def benchmark_kernels(
     rows: int = Query(default=100_000, ge=1_000, le=MAX_ROWS),
+    ticker: str | None = Query(
+        default=None,
+        description=(
+            "Use this platform's own ingested real daily history for the "
+            "ticker instead of synthetic data (ignores `rows`)."
+        ),
+    ),
+    db: AsyncSession = Depends(get_db),
 ) -> BenchmarkResponse:
     increment_run_count()
-    # Deterministic synthetic OHLCV - geometric random walk
-    rng = np.random.default_rng(42)
-    close = 100 * np.exp(np.cumsum(rng.normal(0, 0.01, rows)))
-    high = close * (1 + np.abs(rng.normal(0, 0.005, rows)))
-    low = close * (1 - np.abs(rng.normal(0, 0.005, rows)))
+
+    start_date: str | None = None
+    end_date: str | None = None
+    if ticker:
+        df = await _fetch_real_ohlcv(db, ticker)
+        close = df["close"].to_numpy()
+        high = df["high"].to_numpy()
+        low = df["low"].to_numpy()
+        start_date = str(df.index[0])[:10]
+        end_date = str(df.index[-1])[:10]
+        ticker = ticker.upper()
+        rows = len(df)
+    else:
+        # Deterministic synthetic OHLCV - geometric random walk
+        rng = np.random.default_rng(42)
+        close = 100 * np.exp(np.cumsum(rng.normal(0, 0.01, rows)))
+        high = close * (1 + np.abs(rng.normal(0, 0.005, rows)))
+        low = close * (1 - np.abs(rng.normal(0, 0.005, rows)))
     s = pd.Series(close)
     hs, ls = pd.Series(high), pd.Series(low)
 
@@ -287,13 +314,20 @@ def benchmark_kernels(
                 )
             )
 
+    data_desc = (
+        f"real {ticker} history" if ticker else "identical synthetic OHLCV inputs"
+    )
+
     return BenchmarkResponse(
         rows=rows,
+        ticker=ticker,
+        start_date=start_date,
+        end_date=end_date,
         reps=REPS,
         cpp_available=CPP_AVAILABLE,
         note=(
             "Timings are median wall-clock over "
-            f"{REPS} runs on the API host; identical synthetic OHLCV inputs. "
+            f"{REPS} runs on the API host; {data_desc}. "
             "numpy_* is a hand-vectorized NumPy implementation (sliding_window_view "
             "+ scipy.signal.lfilter), the middle option between pandas and C++. "
             "peak_kb is the peak traced-memory delta for one isolated call "
@@ -309,6 +343,9 @@ def benchmark_kernels(
 
 class PipelineBenchmarkResponse(BaseModel):
     rows: int
+    ticker: str | None = None
+    start_date: str | None = None
+    end_date: str | None = None
     output_rows: int
     reps: int
     cpp_available: bool
@@ -320,13 +357,38 @@ class PipelineBenchmarkResponse(BaseModel):
 
 
 @router.get("/pipeline", response_model=PipelineBenchmarkResponse)
-def benchmark_pipeline(
+async def benchmark_pipeline(
     rows: int = Query(default=50_000, ge=1_000, le=MAX_PIPELINE_ROWS),
+    ticker: str | None = Query(
+        default=None,
+        description=(
+            "Use this platform's own ingested real daily history for the "
+            "ticker instead of synthetic data (ignores `rows` - real "
+            "single-ticker history never reaches synthetic's 200K-row scale)."
+        ),
+    ),
+    db: AsyncSession = Depends(get_db),
 ) -> PipelineBenchmarkResponse:
     """End-to-end benchmark: the full 19-feature compute_features() pipeline,
-    pandas vs. the C++20-kernel-backed drop-in (features_cpp.py)."""
+    pandas vs. the C++20-kernel-backed drop-in (features_cpp.py).
+
+    Synthetic by default so `rows` can push past what any real ticker's
+    history actually contains, for a genuine scale test. Pass `ticker` to
+    run the identical comparison on real ingested history instead - see
+    /real-backtest for the same real-data comparison with a trading
+    strategy layered on top."""
     increment_run_count()
-    df = _synthetic_ohlcv_df(rows)
+
+    start_date: str | None = None
+    end_date: str | None = None
+    if ticker:
+        df = await _fetch_real_ohlcv(db, ticker)
+        start_date = str(df.index[0])[:10]
+        end_date = str(df.index[-1])[:10]
+        ticker = ticker.upper()
+    else:
+        df = _synthetic_ohlcv_df(rows)
+
     compare_cols = ML_FEATURE_COLS + ["target_1d"]
 
     def median_ms(fn, reps: int) -> tuple[float, pd.DataFrame]:
@@ -340,10 +402,16 @@ def benchmark_pipeline(
         return float(np.median(ts)), out
 
     p_ms, p_out = median_ms(lambda: compute_features(df), PIPELINE_REPS)
+    data_desc = (
+        f"real {ticker} history" if ticker else "identical synthetic OHLCV input"
+    )
 
     if not CPP_AVAILABLE:
         return PipelineBenchmarkResponse(
-            rows=rows,
+            rows=len(df),
+            ticker=ticker,
+            start_date=start_date,
+            end_date=end_date,
             output_rows=len(p_out),
             reps=PIPELINE_REPS,
             cpp_available=False,
@@ -358,7 +426,10 @@ def benchmark_pipeline(
     diff = float((p_out[compare_cols] - c_out[compare_cols]).abs().to_numpy().max())
 
     return PipelineBenchmarkResponse(
-        rows=rows,
+        rows=len(df),
+        ticker=ticker,
+        start_date=start_date,
+        end_date=end_date,
         output_rows=len(p_out),
         reps=PIPELINE_REPS,
         cpp_available=True,
@@ -369,7 +440,7 @@ def benchmark_pipeline(
         note=(
             "Full 19-feature compute_features() pipeline, pandas vs the "
             f"C++20-kernel-backed drop-in, median wall-clock over {PIPELINE_REPS} "
-            "runs on identical synthetic OHLCV input."
+            f"runs on {data_desc}."
         ),
     )
 
@@ -377,6 +448,7 @@ def benchmark_pipeline(
 class ParallelBenchmarkResponse(BaseModel):
     rows: int
     symbols: int
+    tickers: list[str] | None = None
     reps: int
     cpp_available: bool
     cpu_count: int
@@ -389,9 +461,19 @@ class ParallelBenchmarkResponse(BaseModel):
 
 
 @router.get("/parallel", response_model=ParallelBenchmarkResponse)
-def benchmark_parallel(
+async def benchmark_parallel(
     rows: int = Query(default=200_000, ge=10_000, le=MAX_PARALLEL_ROWS),
     symbols: int = Query(default=4, ge=1, le=MAX_PARALLEL_SYMBOLS),
+    real_data: bool = Query(
+        default=False,
+        description=(
+            "Use this platform's own ingested real daily history for up to "
+            f"{len(REAL_BACKTEST_TICKERS)} tickers ({', '.join(REAL_BACKTEST_TICKERS)}) "
+            "instead of synthetic data - caps `symbols` at that count and "
+            "ignores `rows` (uses the longest common real history instead)."
+        ),
+    ),
+    db: AsyncSession = Depends(get_db),
 ) -> ParallelBenchmarkResponse:
     """Multi-symbol RSI-14: pandas sequential vs. C++ sequential vs. C++
     driven from a Python ThreadPoolExecutor with the GIL released around
@@ -399,10 +481,19 @@ def benchmark_parallel(
     bounded by the API host's core count, which is why cpu_count is
     reported alongside it."""
     increment_run_count()
-    rng = np.random.default_rng(seed=42)
-    closes = [
-        100 * np.exp(np.cumsum(rng.normal(0, 0.01, rows))) for _ in range(symbols)
-    ]
+
+    tickers: list[str] | None = None
+    if real_data:
+        symbols = min(symbols, len(REAL_BACKTEST_TICKERS))
+        tickers = REAL_BACKTEST_TICKERS[:symbols]
+        dfs = [await _fetch_real_ohlcv(db, t) for t in tickers]
+        rows = min(len(df) for df in dfs)
+        closes = [df["close"].to_numpy()[-rows:] for df in dfs]
+    else:
+        rng = np.random.default_rng(seed=42)
+        closes = [
+            100 * np.exp(np.cumsum(rng.normal(0, 0.01, rows))) for _ in range(symbols)
+        ]
     series = [pd.Series(c) for c in closes]
 
     def bench(fn) -> float:
@@ -420,6 +511,7 @@ def benchmark_parallel(
         return ParallelBenchmarkResponse(
             rows=rows,
             symbols=symbols,
+            tickers=tickers,
             reps=PARALLEL_REPS,
             cpp_available=False,
             cpu_count=cpu_count,
@@ -437,9 +529,12 @@ def benchmark_parallel(
     with ThreadPoolExecutor(max_workers=min(symbols, cpu_count)) as ex:
         c_par_ms = bench(lambda: list(ex.map(lambda c: ck.rsi(c, 14), closes)))
 
+    data_desc = f"real data ({', '.join(tickers)})" if tickers else "synthetic data"
+
     return ParallelBenchmarkResponse(
         rows=rows,
         symbols=symbols,
+        tickers=tickers,
         reps=PARALLEL_REPS,
         cpp_available=True,
         cpu_count=cpu_count,
@@ -449,11 +544,11 @@ def benchmark_parallel(
         sequential_speedup=round(p_ms / c_seq_ms, 1) if c_seq_ms > 0 else None,
         parallel_speedup=round(p_ms / c_par_ms, 1) if c_par_ms > 0 else None,
         note=(
-            f"RSI-14 across {symbols} symbols x {rows:,} rows: pandas sequential vs "
-            "C++ sequential vs C++ driven from a ThreadPoolExecutor (GIL released "
-            "around each kernel call). Parallel speedup is capped by cpu_count on "
-            "the API host - it will be far smaller on a 1-2 vCPU deployment than "
-            "on an 8-core dev machine."
+            f"RSI-14 across {symbols} symbols x {rows:,} rows ({data_desc}): pandas "
+            "sequential vs C++ sequential vs C++ driven from a ThreadPoolExecutor "
+            "(GIL released around each kernel call). Parallel speedup is capped by "
+            "cpu_count on the API host - it will be far smaller on a 1-2 vCPU "
+            "deployment than on an 8-core dev machine."
         ),
     )
 
@@ -473,6 +568,7 @@ class ScalingPoint(BaseModel):
 class ScalingBenchmarkResponse(BaseModel):
     rows: int
     symbols: int
+    tickers: list[str] | None = None
     cpp_available: bool
     cpu_count: int
     points: list[ScalingPoint]
@@ -480,8 +576,18 @@ class ScalingBenchmarkResponse(BaseModel):
 
 
 @router.get("/scaling", response_model=ScalingBenchmarkResponse)
-def benchmark_scaling(
+async def benchmark_scaling(
     rows: int = Query(default=100_000, ge=10_000, le=MAX_SCALING_ROWS),
+    real_data: bool = Query(
+        default=False,
+        description=(
+            "Use this platform's own ingested real daily history, cycling "
+            f"{', '.join(REAL_BACKTEST_TICKERS)} to fill all {SCALING_SYMBOLS} "
+            "thread-pool slots, instead of synthetic data (ignores `rows` - "
+            "uses the longest common real history instead)."
+        ),
+    ),
+    db: AsyncSession = Depends(get_db),
 ) -> ScalingBenchmarkResponse:
     """Strong-scaling sweep: a FIXED workload (8 independent RSI-14
     computations) driven from thread pools of size 1/2/4/8, to find where
@@ -495,17 +601,29 @@ def benchmark_scaling(
         return ScalingBenchmarkResponse(
             rows=rows,
             symbols=SCALING_SYMBOLS,
+            tickers=None,
             cpp_available=False,
             cpu_count=cpu_count,
             points=[],
             note="C++ extension not built on this host; no scaling data to show.",
         )
 
-    rng = np.random.default_rng(seed=7)
-    closes = [
-        100 * np.exp(np.cumsum(rng.normal(0, 0.01, rows)))
-        for _ in range(SCALING_SYMBOLS)
-    ]
+    tickers: list[str] | None = None
+    if real_data:
+        dfs = [await _fetch_real_ohlcv(db, t) for t in REAL_BACKTEST_TICKERS]
+        rows = min(len(df) for df in dfs)
+        base_closes = [df["close"].to_numpy()[-rows:] for df in dfs]
+        tickers = [
+            REAL_BACKTEST_TICKERS[i % len(REAL_BACKTEST_TICKERS)]
+            for i in range(SCALING_SYMBOLS)
+        ]
+        closes = [base_closes[i % len(base_closes)] for i in range(SCALING_SYMBOLS)]
+    else:
+        rng = np.random.default_rng(seed=7)
+        closes = [
+            100 * np.exp(np.cumsum(rng.normal(0, 0.01, rows)))
+            for _ in range(SCALING_SYMBOLS)
+        ]
 
     def bench_threads(n_threads: int) -> float:
         ts = []
@@ -530,17 +648,24 @@ def benchmark_scaling(
             )
         )
 
+    data_desc = (
+        f"cycling real history for {', '.join(REAL_BACKTEST_TICKERS)}"
+        if tickers
+        else "synthetic data"
+    )
+
     return ScalingBenchmarkResponse(
         rows=rows,
         symbols=SCALING_SYMBOLS,
+        tickers=tickers,
         cpp_available=True,
         cpu_count=cpu_count,
         points=points,
         note=(
             f"Fixed workload: {SCALING_SYMBOLS} independent RSI-14 computations x "
-            f"{rows:,} rows, GIL released around each C++ call, swept across "
-            f"thread-pool sizes on a {cpu_count}-core host. Watch for where the "
-            "curve flattens - that's the core-count ceiling, not a bug."
+            f"{rows:,} rows ({data_desc}), GIL released around each C++ call, swept "
+            f"across thread-pool sizes on a {cpu_count}-core host. Watch for where "
+            "the curve flattens - that's the core-count ceiling, not a bug."
         ),
     )
 
@@ -639,10 +764,6 @@ def benchmark_edge_case(
         numpy_matches_pandas=numpy_matches,
         note=_EDGE_CASE_NOTES[kernel],
     )
-
-
-REAL_BACKTEST_REPS = 3
-REAL_BACKTEST_TICKERS = ["AAPL", "NVDA", "TSLA"]
 
 
 async def _fetch_real_ohlcv(db: AsyncSession, ticker: str) -> pd.DataFrame:
