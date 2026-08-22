@@ -81,3 +81,29 @@ async def test_document_sentiment_agent_truncates_long_document() -> None:
 async def test_document_sentiment_agent_short_document_not_flagged_truncated() -> None:
     result = await run_document_sentiment_agent("NVDA", "Short document.", _stub_llm)
     assert result.errors == []
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_document_sentiment_agent_captures_multiline_summary() -> None:
+    """SUMMARY is the last field in the requested format, and the "2-3
+    sentence narrative" the LLM is asked for often wraps across more
+    than one line - the parser must keep everything after the marker,
+    not just the first line, or later sentences get silently dropped."""
+
+    async def multiline_llm(system: str, user: str, max_tokens: int) -> str:
+        return (
+            "SENTIMENT: bullish\n"
+            "SCORE: 0.6\n"
+            "CONFIDENCE: 0.7\n"
+            "THEMES: growth\n"
+            "SUMMARY: First sentence of the summary.\n"
+            "Second sentence continues on its own line.\n"
+            "Third sentence too."
+        )
+
+    result = await run_document_sentiment_agent("AAPL", "Some text.", multiline_llm)
+
+    assert "First sentence" in result.summary
+    assert "Second sentence" in result.summary
+    assert "Third sentence" in result.summary

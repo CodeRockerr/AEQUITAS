@@ -82,7 +82,7 @@ export default function AboutPage() {
       {/* ── Hero ──────────────────────────────────────────── */}
       <div
         style={{
-          padding: "80px 40px 72px",
+          padding: "80px clamp(16px, 5vw, 40px) 72px",
           borderBottom: "1px solid var(--border-subtle)",
           position: "relative",
           overflow: "hidden",
@@ -225,7 +225,7 @@ export default function AboutPage() {
         ))}
       </CardGrid>
 
-      <div style={{ padding: "64px 40px", maxWidth: "1100px" }}>
+      <div style={{ padding: "64px clamp(16px, 5vw, 40px)", maxWidth: "1100px" }}>
         {/* ── What it does ──────────────────────────────────── */}
         <div style={{ marginBottom: "72px" }}>
           <div
@@ -628,9 +628,9 @@ export default function AboutPage() {
             >
               MS Computer Science · NC State University
               <br />
-              GPA 3.80 · AI/ML · Software Development · Research · Quant Systems
+              AI/ML · Software Development · Research · Quant Systems
             </div>
-            <div style={{ display: "flex", gap: "8px" }}>
+            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
               <a
                 href="https://github.com/CodeRockerr"
                 target="_blank"

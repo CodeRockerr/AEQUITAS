@@ -119,7 +119,7 @@ export default function RiskPage() {
     <div style={{ minHeight: "100vh" }}>
       <PageHeader title="Risk" subtitle="VAR · CVAR · OPTIONS PRICING" serif />
 
-      <div style={{ padding: "32px 40px" }}>
+      <div style={{ padding: "32px clamp(16px, 5vw, 40px)" }}>
         {/* ── VaR Section ───────────────────────────────── */}
         <div
           style={{

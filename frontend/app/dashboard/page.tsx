@@ -150,7 +150,7 @@ export default function DashboardPage() {
         </form>
       </PageHeader>
 
-      <div style={{ padding: "32px 40px" }}>
+      <div style={{ padding: "32px clamp(16px, 5vw, 40px)" }}>
         {/* Quick ticker buttons */}
         <div style={{ display: "flex", gap: "6px", marginBottom: "24px" }}>
           {TICKERS.map((t) => (
@@ -413,11 +413,13 @@ export default function DashboardPage() {
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "space-between",
+                        flexWrap: "wrap",
+                        rowGap: "6px",
                         padding: "10px 0",
                         borderBottom: "1px solid var(--border-subtle)",
                       }}
                     >
-                      <div>
+                      <div style={{ minWidth: 0 }}>
                         <div
                           style={{
                             fontFamily: "var(--font-mono)",
@@ -434,7 +436,7 @@ export default function DashboardPage() {
                             fontFamily: "var(--font-mono)",
                             fontSize: "10px",
                             color: "var(--text-tertiary)",
-                            maxWidth: "220px",
+                            maxWidth: "min(220px, 60vw)",
                             overflow: "hidden",
                             textOverflow: "ellipsis",
                             whiteSpace: "nowrap",
@@ -448,6 +450,7 @@ export default function DashboardPage() {
                           display: "flex",
                           alignItems: "center",
                           gap: "8px",
+                          flexShrink: 0,
                         }}
                       >
                         <div

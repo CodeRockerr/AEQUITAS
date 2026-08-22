@@ -107,7 +107,7 @@ export default function FactorsPage() {
         serif
       />
 
-      <div style={{ padding: "32px 40px" }}>
+      <div style={{ padding: "32px clamp(16px, 5vw, 40px)" }}>
         {/* ── Fama-French Factor Model ──────────────────────── */}
         <div
           style={{

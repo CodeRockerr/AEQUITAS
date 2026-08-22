@@ -22,6 +22,8 @@ const TICKER_SYMBOLS = [
   "AMD",
 ];
 const MINI_GAME_DURATION = 20; // seconds
+const FACT_ROTATE_MS = 8000; // now that the screen holds for 30-35s, cycle through several facts instead of showing one static fact the whole time
+const GAME_RESTART_DELAY_MS = 4000; // pause on the score before auto-starting a new round
 
 function useTypewriter(text: string, speed = 28) {
   const [displayed, setDisplayed] = useState("");
@@ -61,13 +63,37 @@ function TickerCatchGame({ onScore }: { onScore: (n: number) => void }) {
   >([]);
   const [timeLeft, setTimeLeft] = useState(MINI_GAME_DURATION);
   const [over, setOver] = useState(false);
-  const [highScore] = useState(() => {
+  const [highScore, setHighScore] = useState(() => {
     try {
       return parseInt(localStorage.getItem("aq_game_hi") ?? "0", 10);
     } catch {
       return 0;
     }
   });
+
+  // Tracks "did THIS round just beat the high score" separately from a
+  // score > highScore comparison, which would flicker: the game-over
+  // effect below updates highScore to match score right after a new
+  // best, which would immediately make that comparison false again.
+  const [justBeatHighScore, setJustBeatHighScore] = useState(false);
+
+  const restart = useCallback(() => {
+    setTickers([]);
+    setScore(0);
+    setTimeLeft(MINI_GAME_DURATION);
+    setOver(false);
+    setJustBeatHighScore(false);
+  }, []);
+
+  // The loading screen now holds for 30-35s but a round only lasts
+  // MINI_GAME_DURATION (20s) - auto-restart after a short pause on the
+  // score instead of leaving a dead "game over" screen for the rest of
+  // the wait. A visible "Play again" button lets anyone skip the pause.
+  useEffect(() => {
+    if (!over) return;
+    const t = setTimeout(restart, GAME_RESTART_DELAY_MS);
+    return () => clearTimeout(t);
+  }, [over, restart]);
 
   useEffect(() => {
     if (over) return;
@@ -130,11 +156,17 @@ function TickerCatchGame({ onScore }: { onScore: (n: number) => void }) {
     if (over) {
       onScore(score);
       try {
-        const hi = parseInt(localStorage.getItem("aq_game_hi") ?? "0", 10);
-        if (score > hi) localStorage.setItem("aq_game_hi", String(score));
+        // highScore is read once at mount; with auto-restart now enabled,
+        // beating it in a later round needs to update the displayed value
+        // too, not just localStorage.
+        if (score > highScore) {
+          localStorage.setItem("aq_game_hi", String(score));
+          setHighScore(score);
+          setJustBeatHighScore(true);
+        }
       } catch {}
     }
-  }, [over, score, onScore]);
+  }, [over, score, onScore, highScore]);
 
   const catch_ = useCallback((id: number) => {
     setTickers((prev) =>
@@ -260,7 +292,7 @@ function TickerCatchGame({ onScore }: { onScore: (n: number) => void }) {
             >
               {score} caught
             </div>
-            {score > highScore && score > 0 && (
+            {justBeatHighScore && score > 0 && (
               <div
                 style={{
                   fontFamily: "var(--font-mono)",
@@ -280,6 +312,22 @@ function TickerCatchGame({ onScore }: { onScore: (n: number) => void }) {
             >
               High score: {Math.max(score, highScore)}
             </div>
+            <button
+              onClick={restart}
+              style={{
+                marginTop: "4px",
+                fontFamily: "var(--font-mono)",
+                fontSize: "11px",
+                color: "var(--accent-green)",
+                background: "none",
+                border: "1px solid var(--accent-green)",
+                borderRadius: "100px",
+                padding: "4px 12px",
+                cursor: "pointer",
+              }}
+            >
+              Play again ↺
+            </button>
           </div>
         )}
       </div>
@@ -292,10 +340,26 @@ export function LoadingScreen({ onDismiss }: LoadingScreenProps) {
   // factIndex starts null (matches server output, avoiding a hydration
   // mismatch from Math.random() running separately on server and client)
   // and is picked once on mount. The typewriter gets "" until then, so it
-  // never flashes one fact and then resets into a different one.
+  // never flashes one fact and then resets into a different one. With the
+  // screen now holding for 30-35s, it then rotates to a new (never
+  // immediately-repeated) fact every FACT_ROTATE_MS instead of sitting on
+  // one static fact for the whole wait.
   const [factIndex, setFactIndex] = useState<number | null>(null);
   useEffect(() => {
     setFactIndex(Math.floor(Math.random() * TRADING_FACTS.length));
+
+    const timer = setInterval(() => {
+      setFactIndex((prev) => {
+        if (TRADING_FACTS.length <= 1) return prev;
+        let next = Math.floor(Math.random() * TRADING_FACTS.length);
+        while (next === prev) {
+          next = Math.floor(Math.random() * TRADING_FACTS.length);
+        }
+        return next;
+      });
+    }, FACT_ROTATE_MS);
+
+    return () => clearInterval(timer);
   }, []);
   const fact = factIndex !== null ? TRADING_FACTS[factIndex] : null;
   const { displayed, done } = useTypewriter(fact?.fact ?? "");

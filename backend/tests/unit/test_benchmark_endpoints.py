@@ -4,16 +4,73 @@ middle-ground comparison, thread-count scaling sweep, and the NaN
 edge-case explorer.
 """
 
+import io
+from unittest.mock import patch
+
 import pandas as pd
 import pytest
 
 from app.algorithms.ml.features_cpp import CPP_AVAILABLE
 from app.api.v1.benchmark import (
+    _effective_cpu_count,
     _macd_entries_exits,
     benchmark_edge_case,
     benchmark_kernels,
     benchmark_scaling,
 )
+
+
+def _fake_open(responses: dict[str, str]):
+    """Stand-in for builtins.open: paths in `responses` yield a file-like
+    object over that text, everything else raises OSError (as a missing
+    cgroup file/interface would on a non-Linux or unconfined host)."""
+
+    def opener(path, *args, **kwargs):
+        if path in responses:
+            return io.StringIO(responses[path])
+        raise OSError(f"no such file: {path}")
+
+    return opener
+
+
+@pytest.mark.unit
+def test_effective_cpu_count_reads_cgroup_v2_quota() -> None:
+    opener = _fake_open({"/sys/fs/cgroup/cpu.max": "200000 100000\n"})
+    with patch("builtins.open", opener):
+        assert _effective_cpu_count() == 2
+
+
+@pytest.mark.unit
+def test_effective_cpu_count_falls_back_from_unlimited_v2_to_v1() -> None:
+    opener = _fake_open(
+        {
+            "/sys/fs/cgroup/cpu.max": "max 100000\n",
+            "/sys/fs/cgroup/cpu/cpu.cfs_quota_us": "150000\n",
+            "/sys/fs/cgroup/cpu/cpu.cfs_period_us": "100000\n",
+        }
+    )
+    with patch("builtins.open", opener):
+        # 150000/100000 = 1.5 cores - rounds down, never up, to avoid the
+        # oversubscription this function exists to prevent.
+        assert _effective_cpu_count() == 1
+
+
+@pytest.mark.unit
+def test_effective_cpu_count_falls_back_to_os_cpu_count_on_unlimited_v1() -> None:
+    # v1 quota=-1 is cgroup's "no limit set" - must fall through to
+    # os.cpu_count() rather than treating -1 itself as a core count.
+    opener = _fake_open({"/sys/fs/cgroup/cpu/cpu.cfs_quota_us": "-1\n"})
+    with patch("builtins.open", opener), patch("os.cpu_count", return_value=8):
+        assert _effective_cpu_count() == 8
+
+
+@pytest.mark.unit
+def test_effective_cpu_count_falls_back_to_os_cpu_count_when_unconfined() -> None:
+    # No cgroup interface at all, e.g. a macOS/Windows dev machine.
+    opener = _fake_open({})
+    with patch("builtins.open", opener), patch("os.cpu_count", return_value=8):
+        assert _effective_cpu_count() == 8
+
 
 pytestmark = pytest.mark.skipif(
     not CPP_AVAILABLE, reason="aequitas_kernels extension not built"

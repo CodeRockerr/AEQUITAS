@@ -120,7 +120,9 @@ async def run_news_sentiment_agent(ticker: str, llm_call) -> NewsSentimentResult
             f"=== OLDER HEADLINES (14-30 days ago, for trend comparison) ===\n{older_summary}"
             f"{finnhub_context}"
         ),
-        max_tokens=400,
+        # SUMMARY is the last field and needs real room - 400 was tight
+        # enough that the model regularly cut off mid-sentence.
+        max_tokens=600,
     )
 
     sentiment, score, trend, confidence, themes, summary = _parse_llm_response(
@@ -188,7 +190,9 @@ async def run_document_sentiment_agent(
             "SUMMARY: <2-3 sentence narrative summary>"
         ),
         user=f"Ticker: {ticker}\n\n=== DOCUMENT TEXT ===\n{trimmed}",
-        max_tokens=400,
+        # SUMMARY is the last field and needs real room - 400 was tight
+        # enough that the model regularly cut off mid-sentence.
+        max_tokens=600,
     )
 
     sentiment, score, _trend, confidence, themes, summary = _parse_llm_response(
@@ -242,9 +246,15 @@ def _parse_llm_response(text: str) -> tuple[str, float, str, float, list[str], s
                 themes = [
                     t.strip() for t in line.split(":", 1)[1].split(",") if t.strip()
                 ]
-            elif line.upper().startswith("SUMMARY:"):
-                summary = line.split(":", 1)[1].strip()
         except (ValueError, IndexError):
             continue
+
+    # SUMMARY is specced as the last field in the response format, and the
+    # requested "2-3 sentence narrative" often spans more than one line -
+    # take everything after the marker instead of just the line it starts
+    # on, or a wrapped second/third sentence silently gets dropped.
+    marker_idx = text.upper().find("SUMMARY:")
+    if marker_idx != -1:
+        summary = text[marker_idx + len("SUMMARY:") :].strip()
 
     return sentiment, score, trend, confidence, themes, summary

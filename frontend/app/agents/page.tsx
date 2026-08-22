@@ -224,7 +224,7 @@ export default function AgentsPage() {
         serif
       />
 
-      <div style={{ padding: "32px 40px" }}>
+      <div style={{ padding: "32px clamp(16px, 5vw, 40px)" }}>
         <div
           style={{
             display: "flex",
