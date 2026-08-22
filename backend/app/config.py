@@ -38,7 +38,7 @@ class Settings(BaseSettings):
     # ── App ───────────────────────────────────────────────────
     app_env: str = Field(default="development")
     app_debug: bool = Field(default=True)
-    app_version: str = Field(default="0.13.0")
+    app_version: str = Field(default="0.14.0")
     secret_key: str = Field(default="change-me-in-production")
     log_level: str = Field(default="INFO")
 

@@ -13,5 +13,5 @@ export const SITE_STATS = {
   agentNodes: "4",
   mlModels: "2",
   apiRouters: "13",
-  version: "v0.13.0",
+  version: "v0.14.0",
 } as const;
