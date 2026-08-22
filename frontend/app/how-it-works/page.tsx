@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { PipelineFlowDiagram } from "@/components/ui/PipelineFlowDiagram";
 
 interface Topic {
   id: string;
@@ -135,6 +136,7 @@ export default function HowItWorksPage() {
           display: "grid",
           gap: 24,
           maxWidth: 880,
+          margin: "0 auto",
         }}
       >
         <p
@@ -149,6 +151,8 @@ export default function HowItWorksPage() {
           hardcoded placeholder. Here&apos;s what&apos;s actually running
           under the hood - tap a card to open it up.
         </p>
+
+        <PipelineFlowDiagram />
 
         <div style={{ display: "grid", gap: 12 }}>
           {TOPICS.map((topic) => {
