@@ -25,6 +25,7 @@ import numpy as np
 import pandas as pd
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
+from scipy.signal import lfilter
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -93,16 +94,35 @@ PARALLEL_REPS = 3
 
 
 def _synthetic_ohlcv_df(rows: int, seed: int = 42) -> pd.DataFrame:
-    """Synthetic OHLCV DataFrame for pipeline/parallel benchmarks - a
-    geometric random walk, same shape as the real market data compute_features
-    expects (open/high/low/close/volume, DatetimeIndex)."""
+    """Synthetic OHLCV DataFrame for the pipeline benchmark - a
+    mean-reverting log-price walk, same shape as the real market data
+    compute_features expects (open/high/low/close/volume, DatetimeIndex)."""
     rng = np.random.default_rng(seed)
-    close = 100 * np.exp(np.cumsum(rng.normal(0.0003, 0.015, rows)))
+    # A plain (even driftless) random walk's cumulative sum grows with
+    # sqrt(rows) in EITHER direction - unbounded, so it can still wander
+    # arbitrarily far from a realistic price at large row counts (the old
+    # +0.0003/step drift put "price" at ~1e27 by MAX_PIPELINE_ROWS, and a
+    # driftless walk still occasionally neared zero at the same size).
+    # Both surfaced as pandas/C++ EMA-based features (macd, atr, bb_*)
+    # spuriously diverging or dividing by ~0 - a synthetic-data artifact,
+    # not a real kernel discrepancy. A mean-reverting log-price (AR(1) via
+    # scipy.signal.lfilter, the same vectorized-recurrence trick used in
+    # features_numpy.py) keeps "close" in a realistic band around $100
+    # regardless of how many rows are requested.
+    kappa = 0.001  # reversion speed; stationary std of log-price ~= 0.015/sqrt(2*kappa)
+    target_log_price = np.log(100)
+    noise = rng.normal(0, 0.015, rows)
+    log_price = lfilter([1.0], [1.0, -(1 - kappa)], kappa * target_log_price + noise)
+    close = np.exp(log_price)
     high = close * (1 + rng.uniform(0, 0.02, rows))
     low = close * (1 - rng.uniform(0, 0.02, rows))
     open_ = close * (1 + rng.normal(0, 0.005, rows))
     volume = rng.integers(1_000_000, 10_000_000, rows).astype(float)
-    idx = pd.date_range("2010-01-01", periods=rows, freq="B")
+    # unit="s": at the largest supported row counts, "B"-frequency dates
+    # anchored at 2010 run out past the year 2262 - nanosecond-resolution
+    # timestamps (pandas' default) overflow there, but second resolution
+    # doesn't, and nothing here needs sub-second precision anyway.
+    idx = pd.date_range("2010-01-01", periods=rows, freq="B", unit="s")
     return pd.DataFrame(
         {"open": open_, "high": high, "low": low, "close": close, "volume": volume},
         index=idx,

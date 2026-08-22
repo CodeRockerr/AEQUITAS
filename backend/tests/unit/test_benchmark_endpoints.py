@@ -12,10 +12,13 @@ import pytest
 
 from app.algorithms.ml.features_cpp import CPP_AVAILABLE
 from app.api.v1.benchmark import (
+    MAX_PIPELINE_ROWS,
     _effective_cpu_count,
     _macd_entries_exits,
+    _synthetic_ohlcv_df,
     benchmark_edge_case,
     benchmark_kernels,
+    benchmark_pipeline,
     benchmark_scaling,
 )
 
@@ -72,6 +75,19 @@ def test_effective_cpu_count_falls_back_to_os_cpu_count_when_unconfined() -> Non
         assert _effective_cpu_count() == 8
 
 
+@pytest.mark.unit
+def test_synthetic_ohlcv_price_stays_bounded_at_max_pipeline_rows() -> None:
+    # A driftful (or even driftless) random walk's cumulative sum grows
+    # with rows - the old generator put "close" at ~1e27 by
+    # MAX_PIPELINE_ROWS, far past where float64 has any real precision.
+    # The mean-reverting walk should stay in a realistic band regardless
+    # of row count.
+    df = _synthetic_ohlcv_df(MAX_PIPELINE_ROWS)
+    close = df["close"]
+    assert close.min() > 0.5
+    assert close.max() < 5_000
+
+
 pytestmark = pytest.mark.skipif(
     not CPP_AVAILABLE, reason="aequitas_kernels extension not built"
 )
@@ -114,6 +130,19 @@ def test_edge_case_rolling_max_known_limitation() -> None:
 
     with_nan = benchmark_edge_case(scenario="interior_nan", kernel="rolling_max")
     assert with_nan.cpp_matches_pandas is False
+
+
+@pytest.mark.unit
+def test_pipeline_benchmark_agrees_with_pandas_at_max_rows() -> None:
+    # Regression: at MAX_PIPELINE_ROWS this used to either crash (a date
+    # overflow in the old synthetic-data generator) or silently report a
+    # huge max_abs_diff (the old generator's price wandering far enough
+    # that pandas/C++ EMA-based features diverged in float64 precision,
+    # not a real kernel bug). Both are fixed at the data-generation layer.
+    r = benchmark_pipeline(rows=MAX_PIPELINE_ROWS)
+    assert r.cpp_available is True
+    assert r.max_abs_diff is not None
+    assert r.max_abs_diff < 1e-6
 
 
 @pytest.mark.unit
