@@ -15,14 +15,13 @@ history without ever calling POST /ingest manually.
 
 from datetime import UTC, datetime, timedelta
 
-import pandas as pd
 import structlog
-import yfinance as yf  # type: ignore[import-untyped]
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.data.ingestion.market_data import fetch_and_store_ohlcv
 from app.db import get_db
 from app.models.market_data import OHLCVBar
 
@@ -48,62 +47,6 @@ class HistoryResponse(BaseModel):
     n_candles: int
     first_date: str | None
     last_date: str | None
-
-
-async def _ingest_full_history(ticker: str) -> int:
-    """
-    Fetch and upsert the FULL price history for a ticker, from its
-    first trading day to today. Uses yfinance's period="max".
-
-    Returns number of new rows inserted.
-    """
-    from app.db import AsyncSessionLocal
-
-    try:
-        stock = yf.Ticker(ticker)
-        hist = stock.history(period="max", interval="1d")
-    except Exception as e:
-        log.warning("full_history_fetch_failed", ticker=ticker, error=str(e))
-        return 0
-
-    if hist.empty:
-        return 0
-
-    timestamps: list[datetime] = [
-        ts.to_pydatetime() for ts in pd.to_datetime(hist.index)
-    ]
-
-    rows_inserted = 0
-    async with AsyncSessionLocal() as db:
-        for bar_time, (_, row) in zip(timestamps, hist.iterrows(), strict=True):
-            existing = await db.execute(
-                select(OHLCVBar).where(
-                    OHLCVBar.ticker == ticker,
-                    OHLCVBar.time == bar_time,
-                    OHLCVBar.interval == "1d",
-                )
-            )
-            bar = existing.scalar_one_or_none()
-
-            if bar is None:
-                db.add(
-                    OHLCVBar(
-                        ticker=ticker,
-                        time=bar_time,
-                        interval="1d",
-                        open=float(row["Open"]),
-                        high=float(row["High"]),
-                        low=float(row["Low"]),
-                        close=float(row["Close"]),
-                        volume=int(row["Volume"]),
-                    )
-                )
-                rows_inserted += 1
-
-        await db.commit()
-
-    log.info("full_history_ingested", ticker=ticker, rows=rows_inserted)
-    return rows_inserted
 
 
 @router.get("/api/v1/history/{ticker}", response_model=HistoryResponse)
@@ -160,13 +103,21 @@ async def get_price_history(
             needs_full_ingest = True
 
     if needs_full_ingest:
-        rows = await _ingest_full_history(ticker)
-        if rows == 0 and earliest is None:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Could not find any price data for '{ticker}'. "
-                f"Check the ticker symbol is correct.",
+        try:
+            await fetch_and_store_ohlcv(db, ticker, period="max", interval="1d")
+        except ValueError as e:
+            if earliest is None:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Could not find any price data for '{ticker}'. "
+                    f"Check the ticker symbol is correct.",
+                ) from e
+            log.warning(
+                "full_history_topup_failed", ticker=ticker, error=str(e)
             )
+            # Already have some data for this ticker - serve what's
+            # already stored instead of failing the whole request over
+            # a transient top-up hiccup.
 
     # Determine the cutoff date for the requested range
     range_days = {
@@ -177,32 +128,27 @@ async def get_price_history(
         "max": None,
     }[range_]
 
-    query = (
-        select(OHLCVBar)
-        .where(OHLCVBar.ticker == ticker, OHLCVBar.interval == "1d")
-        .order_by(OHLCVBar.time.asc())
+    # time is a `timestamptz` column, so the cutoff filter can be pushed
+    # into the query itself - fetching every stored bar just to throw
+    # most of them away in Python (the previous approach) meant a "1mo"
+    # chart request paid for transferring and deserializing a ticker's
+    # entire history, which only gets slower as more history accumulates.
+    query = select(OHLCVBar).where(
+        OHLCVBar.ticker == ticker, OHLCVBar.interval == "1d"
     )
+    if range_days is not None:
+        cutoff = datetime.now(UTC) - timedelta(days=range_days)
+        query = query.where(OHLCVBar.time >= cutoff)
+    query = query.order_by(OHLCVBar.time.asc())
 
     bars_result = await db.execute(query)
-    all_bars: list[OHLCVBar] = list(bars_result.scalars().all())
+    bars: list[OHLCVBar] = list(bars_result.scalars().all())
 
-    if not all_bars:
+    if not bars:
         raise HTTPException(
             status_code=404,
             detail=f"No price data available for '{ticker}'.",
         )
-
-    bars: list[OHLCVBar]
-    if range_days is not None:
-        cutoff = datetime.now(UTC) - timedelta(days=range_days)
-        bars = [
-            b
-            for b in all_bars
-            if (b.time if b.time.tzinfo is not None else b.time.replace(tzinfo=UTC))
-            >= cutoff
-        ]
-    else:
-        bars = all_bars
 
     candles = [
         CandleOut(
