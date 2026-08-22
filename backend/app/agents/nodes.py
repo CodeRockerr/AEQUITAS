@@ -360,7 +360,10 @@ async def critic_node(state: dict) -> dict:  # type: ignore[type-arg]
             "(3) inconsistencies with quantitative data, "
             "(4) overconfident language."
         ),
-        max_tokens=512,
+        # 4 substantive points plus a verdict line don't fit in 512 tokens -
+        # the model was cutting off before finishing later points (missing
+        # risk factors in particular, being #2 of 4).
+        max_tokens=1024,
     )
 
     needs_revision = "VERDICT: REVISE" in critique and revision_count < MAX_REVISIONS

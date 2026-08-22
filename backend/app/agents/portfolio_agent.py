@@ -218,7 +218,9 @@ async def run_portfolio_agent(
             f"=== COINTEGRATED PAIRS ===\n{pairs_summary}\n\n"
             "Write a 300-400 word portfolio construction thesis."
         ),
-        max_tokens=700,
+        # 300-400 words plus markdown section headers regularly runs past
+        # 700 tokens, cutting off the last section ("key risks") entirely.
+        max_tokens=1000,
     )
 
     return PortfolioConstructionResult(

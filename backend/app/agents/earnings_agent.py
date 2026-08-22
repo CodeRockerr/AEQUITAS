@@ -189,7 +189,10 @@ async def run_earnings_agent(ticker: str, llm_call) -> EarningsAnalysisResult:
             f"=== KEY FUNDAMENTALS ===\n{metrics_summary}\n\n"
             "Write a 250-350 word earnings analysis."
         ),
-        max_tokens=600,
+        # 250-350 words plus the required trailing GUIDANCE line left
+        # little margin at 600 - matches the truncation pattern found and
+        # fixed in the critic/portfolio/news-sentiment agents.
+        max_tokens=800,
     )
 
     guidance_sentiment = "unknown"
