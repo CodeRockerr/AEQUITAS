@@ -450,7 +450,7 @@ export function Sidebar() {
         className="hidden md:flex"
         style={{
           width: "208px",
-          minHeight: "100vh",
+          height: "100vh",
           background: "var(--bg-surface)",
           borderRight: "1px solid var(--border-subtle)",
           flexDirection: "column",
