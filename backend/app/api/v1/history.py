@@ -112,9 +112,7 @@ async def get_price_history(
                     detail=f"Could not find any price data for '{ticker}'. "
                     f"Check the ticker symbol is correct.",
                 ) from e
-            log.warning(
-                "full_history_topup_failed", ticker=ticker, error=str(e)
-            )
+            log.warning("full_history_topup_failed", ticker=ticker, error=str(e))
             # Already have some data for this ticker - serve what's
             # already stored instead of failing the whole request over
             # a transient top-up hiccup.
@@ -133,9 +131,7 @@ async def get_price_history(
     # most of them away in Python (the previous approach) meant a "1mo"
     # chart request paid for transferring and deserializing a ticker's
     # entire history, which only gets slower as more history accumulates.
-    query = select(OHLCVBar).where(
-        OHLCVBar.ticker == ticker, OHLCVBar.interval == "1d"
-    )
+    query = select(OHLCVBar).where(OHLCVBar.ticker == ticker, OHLCVBar.interval == "1d")
     if range_days is not None:
         cutoff = datetime.now(UTC) - timedelta(days=range_days)
         query = query.where(OHLCVBar.time >= cutoff)

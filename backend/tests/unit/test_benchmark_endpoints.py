@@ -71,6 +71,7 @@ def test_effective_cpu_count_falls_back_to_os_cpu_count_when_unconfined() -> Non
     with patch("builtins.open", opener), patch("os.cpu_count", return_value=8):
         assert _effective_cpu_count() == 8
 
+
 pytestmark = pytest.mark.skipif(
     not CPP_AVAILABLE, reason="aequitas_kernels extension not built"
 )

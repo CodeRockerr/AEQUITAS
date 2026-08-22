@@ -112,9 +112,7 @@ async def test_narrow_range_on_already_ingested_ticker_skips_full_reingest() -> 
     ticker has any history at all - the slow full re-ingest path must
     not fire just because someone asked for a short range."""
     db = _FakeDB(_bars_spanning_years(2))
-    with patch(
-        "app.api.v1.history.fetch_and_store_ohlcv", AsyncMock()
-    ) as mock_fetch:
+    with patch("app.api.v1.history.fetch_and_store_ohlcv", AsyncMock()) as mock_fetch:
         await get_price_history("AAPL", range_="1mo", db=db)  # type: ignore[arg-type]
     mock_fetch.assert_not_called()
 
@@ -124,9 +122,7 @@ async def test_narrow_range_on_already_ingested_ticker_skips_full_reingest() -> 
 async def test_max_range_with_long_history_skips_full_reingest() -> None:
     """Already has 5+ years - "max" doesn't need a fresh full ingest."""
     db = _FakeDB(_bars_spanning_years(5))
-    with patch(
-        "app.api.v1.history.fetch_and_store_ohlcv", AsyncMock()
-    ) as mock_fetch:
+    with patch("app.api.v1.history.fetch_and_store_ohlcv", AsyncMock()) as mock_fetch:
         await get_price_history("AAPL", range_="max", db=db)  # type: ignore[arg-type]
     mock_fetch.assert_not_called()
 
@@ -137,9 +133,7 @@ async def test_max_range_with_short_history_triggers_full_reingest() -> None:
     """Only ~1 year stored but "max" was requested - the heuristic
     should recognize this is probably a partial ingest and top up."""
     db = _FakeDB(_bars_spanning_years(1))
-    with patch(
-        "app.api.v1.history.fetch_and_store_ohlcv", AsyncMock()
-    ) as mock_fetch:
+    with patch("app.api.v1.history.fetch_and_store_ohlcv", AsyncMock()) as mock_fetch:
         await get_price_history("AAPL", range_="max", db=db)  # type: ignore[arg-type]
     mock_fetch.assert_awaited_once()
 
