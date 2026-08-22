@@ -394,6 +394,7 @@ export default function PerformancePage() {
         </div>
 
         <SectionHeader
+          centered
           title="Per-kernel benchmark"
           subtitle="Five rolling-window / exponential-smoothing kernels, isolated"
         />
@@ -709,11 +710,11 @@ export default function PerformancePage() {
                 of the way there, or does pandas' overhead turn out not to
                 have been the real bottleneck? Answer varies by kernel -
                 sometimes NumPy is even slower than pandas. */}
-            <div>
+            <div style={{ textAlign: "center" }}>
               <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)" }}>
                 The middle option: hand-vectorized NumPy
               </div>
-              <p style={{ fontSize: 12, color: "var(--text-secondary)", maxWidth: 720, marginTop: 4 }}>
+              <p style={{ fontSize: 12, color: "var(--text-secondary)", maxWidth: 720, margin: "0 auto", marginTop: 4 }}>
                 sliding_window_view + scipy.signal.lfilter, no pandas, no C++. Speedup vs.
                 pandas - values below 1x mean NumPy was slower.
               </p>
@@ -775,11 +776,11 @@ export default function PerformancePage() {
             {/* Peak memory: does "zero-copy" actually show up as less
                 memory, or does hand-rolled NumPy's windowed view end up
                 touching more bytes than pandas along the way? */}
-            <div>
+            <div style={{ textAlign: "center" }}>
               <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)" }}>
                 Peak memory per call
               </div>
-              <p style={{ fontSize: 12, color: "var(--text-secondary)", maxWidth: 720, marginTop: 4 }}>
+              <p style={{ fontSize: 12, color: "var(--text-secondary)", maxWidth: 720, margin: "0 auto", marginTop: 4 }}>
                 tracemalloc peak-traced-memory delta for one isolated call, measured
                 separately from the timed runs above so it doesn&apos;t skew them.
               </p>
@@ -956,7 +957,7 @@ export default function PerformancePage() {
               </table>
             </div>
 
-            <p style={{ fontSize: 12, color: "var(--text-secondary)", maxWidth: 720 }}>
+            <p style={{ fontSize: 12, color: "var(--text-secondary)", maxWidth: 720, margin: "0 auto" }}>
               {data.note} Speedups vary by host; the spread across kernels is the
               interesting result: largest where the pandas formulation builds intermediate
               DataFrames (ATR), smallest where pandas is already algorithmically efficient
@@ -967,6 +968,7 @@ export default function PerformancePage() {
 
         {/* -- NaN / edge-case explorer ---------------------------- */}
         <SectionHeader
+          centered
           title="NaN & edge-case explorer"
           subtitle="Same tiny series, three backends - pick a scenario and watch where they agree, and where they don't"
         />
@@ -1130,7 +1132,7 @@ export default function PerformancePage() {
               </table>
             </div>
 
-            <p style={{ fontSize: 12, color: "var(--text-secondary)", maxWidth: 720 }}>
+            <p style={{ fontSize: 12, color: "var(--text-secondary)", maxWidth: 720, margin: "0 auto" }}>
               {edgeData.note}
             </p>
           </div>
@@ -1138,6 +1140,7 @@ export default function PerformancePage() {
 
         {/* -- End-to-end pipeline ------------------------------- */}
         <SectionHeader
+          centered
           title="End-to-end pipeline"
           subtitle="Full 19-feature compute_features() - pandas vs. the C++-backed drop-in"
         />
@@ -1292,7 +1295,7 @@ export default function PerformancePage() {
               </div>
             )}
 
-            <p style={{ fontSize: 12, color: "var(--text-secondary)", maxWidth: 720 }}>
+            <p style={{ fontSize: 12, color: "var(--text-secondary)", maxWidth: 720, margin: "0 auto" }}>
               {pipelineData.note}
             </p>
           </div>
@@ -1300,6 +1303,7 @@ export default function PerformancePage() {
 
         {/* -- Real backtest: the credibility check ---------------- */}
         <SectionHeader
+          centered
           title="Real backtest, not synthetic"
           subtitle="Same pipeline, but on this platform's own ingested real history for a real ticker"
         />
@@ -1428,7 +1432,7 @@ export default function PerformancePage() {
               />
             </CardGrid>
 
-            <p style={{ fontSize: 12, color: "var(--text-secondary)", maxWidth: 720 }}>
+            <p style={{ fontSize: 12, color: "var(--text-secondary)", maxWidth: 720, margin: "0 auto" }}>
               {backtestData.note} No transaction costs modeled - see
               backend/app/backtesting/engine.py.
             </p>
@@ -1437,11 +1441,12 @@ export default function PerformancePage() {
 
         {/* -- Multi-symbol parallel (GIL release) ---------------- */}
         <SectionHeader
+          centered
           title="Multi-symbol parallel (GIL release)"
           subtitle="RSI-14 across N symbols - pandas sequential vs. C++ sequential vs. C++ across a Python ThreadPoolExecutor"
           badge={<Badge variant="green">GIL released during C++ calls</Badge>}
         />
-        <p style={{ fontSize: 12, color: "var(--text-secondary)", maxWidth: 720, marginTop: -8 }}>
+        <p style={{ fontSize: 12, color: "var(--text-secondary)", maxWidth: 720, margin: "0 auto", marginTop: -8 }}>
           Python&apos;s Global Interpreter Lock normally lets only one thread run Python
           bytecode at a time, so spinning up 8 threads around pandas code doesn&apos;t
           parallelize CPU-bound work at all. Releasing the GIL around the C++ compute
@@ -1620,7 +1625,7 @@ export default function PerformancePage() {
               </div>
             )}
 
-            <p style={{ fontSize: 12, color: "var(--text-secondary)", maxWidth: 720 }}>
+            <p style={{ fontSize: 12, color: "var(--text-secondary)", maxWidth: 720, margin: "0 auto" }}>
               {parallelData.note}
             </p>
           </div>
@@ -1628,6 +1633,7 @@ export default function PerformancePage() {
 
         {/* -- Thread-count scaling sweep -------------------------- */}
         <SectionHeader
+          centered
           title="Thread-count scaling"
           subtitle="Fixed workload, varying thread-pool size - where does adding threads stop helping?"
         />
@@ -1725,7 +1731,7 @@ export default function PerformancePage() {
               </ResponsiveContainer>
             </div>
 
-            <p style={{ fontSize: 12, color: "var(--text-secondary)", maxWidth: 720 }}>
+            <p style={{ fontSize: 12, color: "var(--text-secondary)", maxWidth: 720, margin: "0 auto" }}>
               {scalingData.note} Bars beyond this host&apos;s core count are shown in
               gray - more threads than cores rarely helps and can even hurt slightly.
             </p>

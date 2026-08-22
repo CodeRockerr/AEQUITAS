@@ -108,7 +108,7 @@ export default function TradingSimulationPage() {
       />
 
       <div style={{ padding: "24px clamp(16px, 5vw, 40px)", display: "grid", gap: 24 }}>
-        <p style={{ fontSize: 13, color: "var(--text-secondary)", maxWidth: 720 }}>
+        <p style={{ fontSize: 13, color: "var(--text-secondary)", maxWidth: 720, margin: "0 auto" }}>
           This streams a synthetic random-walk price feed - no real broker, no real
           orders, no real money. Every new bar re-runs the platform&apos;s actual RSI
           signal logic (<code style={{ fontFamily: "var(--font-mono)" }}>
@@ -125,6 +125,7 @@ export default function TradingSimulationPage() {
         />
 
         <SectionHeader
+          centered
           title="Live trading decision latency"
           subtitle="Start the feed and watch each tick's decision, and its latency, land in real time"
         />
@@ -233,7 +234,7 @@ export default function TradingSimulationPage() {
               </table>
             </div>
 
-            <p style={{ fontSize: 12, color: "var(--text-secondary)", maxWidth: 720 }}>
+            <p style={{ fontSize: 12, color: "var(--text-secondary)", maxWidth: 720, margin: "0 auto" }}>
               Same RSI-14 kernel as the per-kernel benchmark, run once per incoming tick
               on a 250-bar rolling window and timed both ways - the concrete version of
               &ldquo;faster kernels&rdquo;: faster time-to-decision on every new bar, not

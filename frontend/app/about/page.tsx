@@ -628,7 +628,7 @@ export default function AboutPage() {
             >
               MS Computer Science · NC State University
               <br />
-              GPA 3.80 · AI/ML · Software Development · Research · Quant Systems
+              AI/ML · Software Development · Research · Quant Systems
             </div>
             <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
               <a
