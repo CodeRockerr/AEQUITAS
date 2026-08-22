@@ -12,6 +12,7 @@ import { SITE_STATS } from "@/lib/site-stats";
 const NAV_TOP = [
   { href: "/", label: "Overview", icon: "○" },
   { href: "/dashboard", label: "Dashboard", icon: "◈" },
+  { href: "/how-it-works", label: "How It Works", icon: "◍" },
 ];
 
 const NAV_GROUPS = [
