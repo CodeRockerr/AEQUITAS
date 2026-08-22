@@ -7,7 +7,7 @@ A full-stack quantitative research platform combining real financial algorithms,
 [![CI](https://github.com/CodeRockerr/AEQUITAS/actions/workflows/ci.yml/badge.svg)](https://github.com/CodeRockerr/AEQUITAS/actions)
 ![Python](https://img.shields.io/badge/Python-3.13-blue)
 ![Node](https://img.shields.io/badge/Node-20-green)
-![Tests](https://img.shields.io/badge/tests-167%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-216%20passing-brightgreen)
 ![License](https://img.shields.io/badge/license-MIT-lightgrey)
 
 ---
@@ -97,10 +97,11 @@ flowchart TB
 | Database | Neon (serverless Postgres 16) | Pooled connection over TLS |
 | Cache | Upstash Redis | TLS (`rediss://`), LRU eviction |
 | Keep-warm | GitHub Actions | Pings `/health` every 10 min - prevents Render idle spin-down |
+| Price refresh | GitHub Actions | Weekday-evening cron bulk-refreshes the ticker universe's OHLCV bars |
 
 **Total hosting cost: $0/month.**
 
-**Cold-start handling:** Render's free tier takes ~50-60s to cold-start. A scheduled GitHub Actions workflow prevents this. On first visit, a full-screen animated loading experience engages the user - typewriter finance facts, a catch-the-ticker mini game, a link to the author's portfolio, and a skip button. Auto-dismisses when the API responds (90s hard cap).
+**Cold-start handling:** Render's free tier takes ~50-60s to cold-start. A scheduled GitHub Actions workflow prevents this, which means the API now typically responds almost instantly - too fast for anyone to actually see the loading screen's content. On first visit, a full-screen animated loading experience engages the user - typewriter finance facts (rotating every 8s), a catch-the-ticker mini game (auto-restarts on game over), a link to the author's portfolio, and a skip button - held for a randomized 30-35s minimum so that content is genuinely visible, with a 90s hard cap as a safety net if the API is ever actually slow. Skip bypasses all of this instantly.
 
 ---
 
@@ -216,6 +217,8 @@ Dashboard supports full price history (back to IPO) with candlestick + volume ch
 
 This auto-ingest-on-demand behavior now covers every ticker-driven endpoint, not just the Dashboard's search - backtests, signals, the factor model, and thesis generation all auto-ingest price bars (and, for thesis generation, company metadata + SEC filings) the first time a ticker is requested, instead of 404ing with "insufficient data" until someone manually calls `/ingest`.
 
+On top of the lazy per-ticker path, `POST /api/v1/market-data/refresh-universe` bulk-ingests/refreshes every ticker the frontend actually references (`TICKER_UNIVERSE` in `app/data/ingestion/universe.py`) in one call - `period=max` for a one-time full historical backfill, `period=5d` (the scheduled default) to top up the last few trading days. A GitHub Actions workflow (`refresh-prices.yml`) calls it on a weekday-evening cron so charts/backtests/signals always have current data without waiting on a user's first request to lazily trigger it.
+
 ---
 
 ## The Agentic Pipeline
@@ -264,7 +267,7 @@ AEQUITAS/
 │   │   ├── make_benchmark_chart.py  # static chart from hardcoded numbers
 │   │   └── make_live_benchmark_chart.py  # same chart, pulled from a running host
 │   ├── alembic/versions/            # infrastructure-agnostic migrations
-│   ├── tests/unit/                  # 167 pytest tests
+│   ├── tests/unit/                  # 216 pytest tests
 │   └── pyproject.toml
 ├── frontend/
 │   ├── app/                         # 10 pages: Overview, Dashboard, Backtests, Theses, Risk, Factors,
@@ -357,6 +360,7 @@ Frontend: `NEXT_PUBLIC_API_URL` (build-time variable - changing on Vercel requir
 | `POST` | `/api/v1/chat` | AI chat with Groq tool use (10 AEQUITAS tools) |
 | `WS`   | `/ws/prices` | Real-time price streaming |
 | `GET`  | `/api/v1/history/{ticker}?range_=1y` | Full price history, auto-ingests |
+| `POST` | `/api/v1/market-data/refresh-universe` | Bulk ingest/refresh every ticker in `TICKER_UNIVERSE` |
 | `POST` | `/api/v1/ml/regime/{ticker}` | HMM regime detection |
 | `POST` | `/api/v1/ml/forecast/{ticker}` | XGBoost forecast + SHAP |
 | `GET`  | `/api/v1/signals/{ticker}` | Combined momentum signal |
@@ -395,7 +399,7 @@ mypy app
 pytest tests/unit/ -v
 ```
 
-**167 tests passing.** Coverage threshold: 65%.
+**216 tests passing.** Coverage threshold: 65%.
 
 To also test the C++ kernels locally:
 ```bash
@@ -432,12 +436,12 @@ python benchmark.py          # pandas vs C++ timings, 10K/100K/1M rows
 - [x] **Week 16** - Python vs C++ Performance Lab: Benchmarks + Trading Simulation pages, NumPy/memory/thread-scaling comparisons, NaN edge-case explorer, real-data backtest validation, live run counter, C++ kernels CI job, compiled extension in the production Docker image
 - [x] **Week 17** - Markdown rendering for all AI-generated text (theses, critiques, chat replies); fixed stat-card overflow/dead-space layout bugs across every page; capped backtest lookback windows to prevent return-compounding blowups; Groq model migration off a deprecated model
 - [x] **Week 18** - Draggable AI chat widget (position persists via `localStorage`); document/report sentiment scoring via pasted text or uploaded `.txt`/`.md`/`.pdf`; automatic SEC EDGAR filing ingestion for thesis generation (real 10-K/10-Q citations); auto-ingest now covers every ticker-driven endpoint, not just the Dashboard's search; replaced CSS Grid card layouts with flexbox to eliminate dead space in unevenly-filled rows; fixed chart-tooltip text contrast in dark mode across all 9 tooltips
+- [x] **Week 19** - Sidebar is now a responsive hamburger drawer below Tailwind's `md` breakpoint (was a static 208px column that ate over half the screen on a phone); chat widget becomes a full-width bottom sheet on phones instead of an off-fitting floating panel; fixed a page-padding inconsistency (fixed 40px vs. a responsive `clamp`) that was quietly overflowing several pages on narrow viewports; loading screen holds for a randomized 30-35s minimum so the fun fact/game/portfolio links are actually visible now that the API responds almost instantly; bulk ticker-universe ingestion (`POST /refresh-universe`) plus a scheduled GitHub Actions job to keep it current; fixed a CPU-quota bug where the multi-symbol parallel benchmark oversubscribed threads on a quota-limited host (`os.cpu_count()` reports the host's cores, not the container's cgroup quota) and ran slower than sequential instead of faster
 
 ### In Progress / Next
 - [ ] **MCP server** - Claude.ai compatible MCP endpoint so users can connect AEQUITAS as an integration in Claude.ai
 - [ ] **C++ pipeline integration in production** - `compute_features_cpp()` exists and is benchmarked live, but the real ML forecaster still calls the pure-Python `compute_features()`; swap it once the C++ path has more production soak time
-- [ ] **Locked-in benchmark numbers** - a few clean parallel-benchmark re-runs on an idle machine to settle on one headline speedup figure (currently ranges ~20-31× depending on machine load)
-- [ ] **Sidebar mobile responsiveness** - not yet revisited for small viewports
+- [ ] **Locked-in benchmark numbers** - a few clean parallel-benchmark re-runs to settle on one headline speedup figure now that the cgroup-quota fix (Week 19) should make the deployed host's numbers meaningfully less noisy
 
 ### Planned - Enterprise SaaS Phase
 1. Auth + RBAC (NextAuth.js)
